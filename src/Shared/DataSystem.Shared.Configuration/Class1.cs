@@ -1,0 +1,6 @@
+﻿namespace DataSystem.Shared.Configuration;
+
+public class Class1
+{
+
+}
