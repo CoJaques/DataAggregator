@@ -1,30 +1,35 @@
 version: '3.8'
 services:
-  collector-api:
+  collector:
     build:
       context: .
-      dockerfile: src/Collector/DataSystem.Collector.Api/Dockerfile
+      dockerfile: src/DataAggregator.Collector/Dockerfile
     ports:
       - "5000:80"
+    environment:
+      - CollectorType=OpenCN
+      - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
       - influxdb
-      - registration-api
+      - registration
 
-  registration-api:
+  registration:
     build:
       context: .
-      dockerfile: src/Registration/DataSystem.Registration.Api/Dockerfile
+      dockerfile: src/DataAggregator.Registration/Dockerfile
     ports:
       - "5001:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
       - postgres
 
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: datasystem
+      POSTGRES_DB: dataaggregator
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: password123
     ports:
       - "5432:5432"
     volumes:
@@ -35,21 +40,14 @@ services:
     ports:
       - "8086:8086"
     environment:
-      # InfluxDB v3 configuration
       INFLUXDB_INIT_MODE: setup
       INFLUXDB_INIT_USERNAME: admin
       INFLUXDB_INIT_PASSWORD: password123
-      INFLUXDB_INIT_ORG: datasystem-org
-      INFLUXDB_INIT_BUCKET: datasystem-bucket
-      INFLUXDB_INIT_ADMIN_TOKEN: datasystem-admin-token-12345
+      INFLUXDB_INIT_ORG: dataaggregator-org
+      INFLUXDB_INIT_BUCKET: dataaggregator-bucket
+      INFLUXDB_INIT_ADMIN_TOKEN: dataaggregator-admin-token-12345
     volumes:
       - influx_data:/var/lib/influxdb3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 volumes:
   postgres_data:
