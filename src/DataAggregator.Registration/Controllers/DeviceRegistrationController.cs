@@ -52,12 +52,7 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
         }
 
         CollectorInfoDto? deviceInfo = await _deviceRegistrationService.GetCollectorInfoAsync(deviceName);
-        if (deviceInfo == null)
-        {
-            return NotFound($"Device with name '{deviceName}' not found.");
-        }
-
-        return Ok(deviceInfo);
+        return deviceInfo == null ? NotFound($"Device with name '{deviceName}' not found.") : Ok(deviceInfo);
     }
 
     /// <summary>
