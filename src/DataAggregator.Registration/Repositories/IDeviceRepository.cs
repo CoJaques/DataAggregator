@@ -12,7 +12,7 @@ public interface IDeviceRepository
     /// </summary>
     /// <param name="deviceName">The name of the device.</param>
     /// <returns>A task representing the asynchronous operation. The task result contains the device.</returns>
-    public Task<Device> GetByNameAsync(string deviceName);
+    public Task<Device?> GetByNameAsync(string deviceName);
 
     /// <summary>
     /// Creates a new device entry in the store asynchronously.
