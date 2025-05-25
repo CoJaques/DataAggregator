@@ -23,7 +23,18 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
     /// <param name="request">The device registration request containing configuration details.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     [HttpPost("register")]
-    public Task<IActionResult> RegisterDevice([FromBody] DeviceRegistrationRequest request) => throw new NotImplementedException();
+    [ProducesResponseType(typeof(DeviceRegistrationResponse), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> RegisterDevice([FromBody] DeviceRegistrationRequest request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Config.DeviceName))
+        {
+            return BadRequest("Invalid request payload.");
+        }
+
+        DeviceRegistrationResponse response = await _deviceRegistrationService.RegisterCollectorAsync(request);
+        return Ok(response);
+    }
 
     /// <summary>
     /// Retrieves information about a specific device by its name.
@@ -31,12 +42,33 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
     /// <param name="deviceName">The name of the device.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     [HttpGet("{deviceName}")]
-    public Task<IActionResult> GetDeviceInfo(string deviceName) => throw new NotImplementedException();
+    [ProducesResponseType(typeof(CollectorInfoDto), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetDeviceInfo(string deviceName)
+    {
+        if (string.IsNullOrWhiteSpace(deviceName))
+        {
+            return BadRequest("Device name cannot be null or empty.");
+        }
+
+        CollectorInfoDto? deviceInfo = await _deviceRegistrationService.GetCollectorInfoAsync(deviceName);
+        if (deviceInfo == null)
+        {
+            return NotFound($"Device with name '{deviceName}' not found.");
+        }
+
+        return Ok(deviceInfo);
+    }
 
     /// <summary>
     /// Retrieves a list of all registered devices.
     /// </summary>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     [HttpGet]
-    public Task<IActionResult> GetAllDevices() => throw new NotImplementedException();
+    [ProducesResponseType(typeof(IEnumerable<CollectorInfoDto>), 200)]
+    public async Task<IActionResult> GetAllDevices()
+    {
+        IEnumerable<CollectorInfoDto> devices = await _deviceRegistrationService.GetAllCollectorInfoAsync();
+        return Ok(devices);
+    }
 }
