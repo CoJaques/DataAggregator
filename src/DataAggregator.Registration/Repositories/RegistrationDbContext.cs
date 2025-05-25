@@ -30,7 +30,8 @@ public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> optio
         // Configure relationships for Device entity
         builder.Entity<Device>(entity =>
         {
-            entity.HasKey(d => d.DeviceId);
+            entity.HasKey(d => d.Id);
+            entity.Property(d => d.Id).HasColumnType("uuid");
             entity.HasMany(d => d.Sensors)
                   .WithOne(s => s.Device)
                   .HasForeignKey(s => s.DeviceId)
@@ -38,6 +39,10 @@ public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> optio
         });
 
         // Configure relationships for Sensor entity
-        builder.Entity<Sensor>(entity => entity.HasKey(s => s.SensorId));
+        builder.Entity<Sensor>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Id).HasColumnType("uuid");
+        });
     }
 }

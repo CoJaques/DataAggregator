@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DataAggregator.Registration.Entities;
 
@@ -11,15 +10,7 @@ public class Sensor()
     /// <summary>
     /// Gets or sets the unique identifier of the sensor.
     /// </summary>
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public string SensorId { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the unique identifier of the associated device.
-    /// </summary>
-    [Required]
-    public string DeviceId { get; set; } = string.Empty;
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the sensor.

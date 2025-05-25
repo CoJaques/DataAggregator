@@ -65,16 +65,16 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     }
 
     /// <inheritdoc/>
-    public async Task<bool> ExistsAsync(string deviceId)
+    public async Task<bool> ExistsAsync(string deviceName)
     {
         try
         {
-            Log.Information("Checking if device exists: {DeviceId}", deviceId);
-            return await context.Devices.AnyAsync(d => d.DeviceId == deviceId);
+            Log.Information("Checking if device exists: {DeviceId}", deviceName);
+            return await context.Devices.AnyAsync(d => d.DeviceName == deviceName);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to check if device exists: {DeviceId}", deviceId);
+            Log.Error(ex, "Failed to check if device exists: {DeviceId}", deviceName);
             throw new DatabaseAccessException("Failed to check if device exists.", ex);
         }
     }

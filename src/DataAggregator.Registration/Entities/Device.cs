@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DataAggregator.Registration.Entities;
 
@@ -11,9 +10,7 @@ public class Device
     /// <summary>
     /// Gets or sets the unique identifier of the device.
     /// </summary>
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public string DeviceId { get; set; } = string.Empty;
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the device.

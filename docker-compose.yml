@@ -13,7 +13,7 @@ services:
       - influxdb
       - registration
 
-   registration:
+  registration:
     build:
       context: .
       dockerfile: src/DataAggregator.Registration/Dockerfile
