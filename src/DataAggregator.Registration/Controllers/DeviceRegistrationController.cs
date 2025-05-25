@@ -40,7 +40,6 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
         }
         catch (Exception ex)
         {
-            // TODO: Add logging for unexpected error
             return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
         }
     }
@@ -68,7 +67,6 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
         }
         catch (Exception ex)
         {
-            // TODO: Add logging for unexpected error
             return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
         }
     }
@@ -89,7 +87,6 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
         }
         catch (Exception ex)
         {
-            // TODO: Add logging for unexpected error
             return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
         }
     }
