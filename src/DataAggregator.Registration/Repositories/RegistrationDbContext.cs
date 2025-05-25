@@ -38,9 +38,6 @@ public class RegistrationDbContext : DbContext
         });
 
         // Configure relationships for Sensor entity
-        builder.Entity<Sensor>(entity =>
-        {
-            entity.HasKey(s => s.SensorId);
-        });
+        builder.Entity<Sensor>(entity => entity.HasKey(s => s.SensorId));
     }
 }
