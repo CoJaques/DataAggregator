@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using DataAggregator.Registration.Repositories;
 using DataAggregator.Registration.Services;
 using DataAggregator.Shared;
@@ -50,6 +51,27 @@ builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IDeviceRegistrationService, DeviceRegistrationService>();
 
 WebApplication app = builder.Build();
+
+// Apply pending migrations at startup
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    RegistrationDbContext dbContext = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
+    try
+    {
+        Log.Information("Applying database migrations...");
+        dbContext.Database.Migrate();
+        Log.Information("Database is up to date.");
+    }
+    catch (Exception ex)
+    {
+        if (ex.InnerException is SocketException)
+            Log.Fatal(ex, "Unable to connect to Database.");
+        else
+            Log.Fatal(ex, "An error occurred while applying database migrations.");
+
+        throw;
+    }
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
