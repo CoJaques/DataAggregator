@@ -2,6 +2,7 @@ using DataAggregator.Registration.Entities;
 using DataAggregator.Registration.Repositories;
 using DataAggregator.Shared;
 using Microsoft.Extensions.Options;
+using Serilog;
 
 namespace DataAggregator.Registration.Services;
 
@@ -21,8 +22,11 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
     /// <inheritdoc/>
     public async Task<DeviceRegistrationResponse> RegisterCollectorAsync(DeviceRegistrationRequest request)
     {
+        Log.Information("Registering a new collector: {DeviceName}", request.Config.DeviceName);
+
         if (await _deviceRepository.GetByNameAsync(request.Config.DeviceName) != null)
         {
+            Log.Warning("Device already exists: {DeviceName}", request.Config.DeviceName);
             return new DeviceRegistrationResponse(false, string.Empty, string.Empty);
         }
 
@@ -48,21 +52,26 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
 
         await _deviceRepository.CreateAsync(device);
 
+        Log.Information("Collector registered successfully: {DeviceName}", request.Config.DeviceName);
         return new DeviceRegistrationResponse(true, defaultEndpoint.Endpoint, defaultEndpoint.Token);
     }
 
     /// <inheritdoc/>
     public async Task<CollectorInfoDto?> GetCollectorInfoAsync(string collectorName)
     {
+        Log.Information("Fetching collector info: {CollectorName}", collectorName);
+
         Device? device = await _deviceRepository.GetByNameAsync(collectorName);
 
         if (device is null)
         {
+            Log.Warning("Collector not found: {CollectorName}", collectorName);
             return null;
         }
 
         var sensors = device.Sensors.Select(sensor => new SensorInfoDto(sensor.SensorName, sensor.SensorType, sensor.Unit, sensor.Metadata)).ToList();
 
+        Log.Information("Collector info retrieved successfully: {CollectorName}", collectorName);
         return new CollectorInfoDto(
                 device.DeviceName,
                 device.Location,
@@ -72,13 +81,19 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
 
     /// <inheritdoc/>
     public async Task<bool> IsCollectorRegisteredAsync(string collectorName)
-        => await _deviceRepository.GetByNameAsync(collectorName) != null;
+    {
+        Log.Information("Checking if collector is registered: {CollectorName}", collectorName);
+        return await _deviceRepository.GetByNameAsync(collectorName) != null;
+    }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<CollectorInfoDto>> GetAllCollectorInfoAsync()
     {
+        Log.Information("Fetching all collector info.");
+
         IEnumerable<Device> devices = await _deviceRepository.GetAllAsync();
 
+        Log.Information("All collector info retrieved successfully.");
         return devices.Select(device => new CollectorInfoDto(
             device.DeviceName,
             device.Location,

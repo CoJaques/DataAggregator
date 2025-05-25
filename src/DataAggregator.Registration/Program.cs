@@ -2,10 +2,20 @@ using DataAggregator.Registration.Repositories;
 using DataAggregator.Registration.Services;
 using DataAggregator.Shared;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Configure Serilog from appsettings.json
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration) // Read configuration from appsettings.json
+    .WriteTo.Console() // Write logs to the console
+    .Enrich.FromLogContext() // Add context to logs
+    .CreateLogger();
+
+builder.Host.UseSerilog(); // Use Serilog as the logging provider
+
+// Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator API", Version = "v1" }));
@@ -19,13 +29,11 @@ string? pgPassword = builder.Configuration["PGPASSWORD"];
 
 if (string.IsNullOrEmpty(pgHost) || string.IsNullOrEmpty(pgDb) || string.IsNullOrEmpty(pgUser) || string.IsNullOrEmpty(pgPassword))
 {
+    Log.Fatal("PostgreSQL environment variables are not properly configured.");
     throw new InvalidOperationException("PostgreSQL environment variables are not properly configured.");
 }
 
 string connectionString = $"Host={pgHost};Port={pgPort};Database={pgDb};Username={pgUser};Password={pgPassword}";
-
-builder.Services.AddDbContext<RegistrationDbContext>(options =>
-    options.UseNpgsql(connectionString));
 
 builder.Services.AddDbContext<RegistrationDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -43,7 +51,7 @@ builder.Services.AddScoped<IDeviceRegistrationService, DeviceRegistrationService
 
 WebApplication app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -62,7 +70,18 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-
 app.MapHealthChecks("/health");
 
-app.Run();
+try
+{
+    Log.Information("Starting the application...");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application failed to start.");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

@@ -1,6 +1,7 @@
 using DataAggregator.Registration.Entities;
 using DataAggregator.Registration.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace DataAggregator.Registration.Repositories;
 
@@ -18,11 +19,12 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     {
         try
         {
+            Log.Information("Fetching device by name: {DeviceName}", deviceName);
             return await context.Devices.Include(d => d.Sensors).FirstOrDefaultAsync(d => d.DeviceName == deviceName);
         }
         catch (Exception ex)
         {
-            // TODO: Add logging for database access error
+            Log.Error(ex, "Failed to retrieve device by name: {DeviceName}", deviceName);
             throw new DatabaseAccessException("Failed to retrieve device by name.", ex);
         }
     }
@@ -32,13 +34,15 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     {
         try
         {
+            Log.Information("Creating a new device: {DeviceName}", device.DeviceName);
             context.Devices.Add(device);
             await context.SaveChangesAsync();
+            Log.Information("Device created successfully: {DeviceName}", device.DeviceName);
             return device;
         }
         catch (Exception ex)
         {
-            // TODO: Add logging for database access error
+            Log.Error(ex, "Failed to create device: {DeviceName}", device.DeviceName);
             throw new DatabaseAccessException("Failed to create device.", ex);
         }
     }
@@ -48,12 +52,14 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     {
         try
         {
+            Log.Information("Updating device: {DeviceName}", device.DeviceName);
             context.Devices.Update(device);
             await context.SaveChangesAsync();
+            Log.Information("Device updated successfully: {DeviceName}", device.DeviceName);
         }
         catch (Exception ex)
         {
-            // TODO: Add logging for database access error
+            Log.Error(ex, "Failed to update device: {DeviceName}", device.DeviceName);
             throw new DatabaseAccessException("Failed to update device.", ex);
         }
     }
@@ -63,11 +69,12 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     {
         try
         {
+            Log.Information("Checking if device exists: {DeviceId}", deviceId);
             return await context.Devices.AnyAsync(d => d.DeviceId == deviceId);
         }
         catch (Exception ex)
         {
-            // TODO: Add logging for database access error
+            Log.Error(ex, "Failed to check if device exists: {DeviceId}", deviceId);
             throw new DatabaseAccessException("Failed to check if device exists.", ex);
         }
     }
@@ -77,11 +84,12 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     {
         try
         {
+            Log.Information("Fetching all devices.");
             return await context.Devices.Include(d => d.Sensors).ToListAsync();
         }
         catch (Exception ex)
         {
-            // TODO: Add logging for database access error
+            Log.Error(ex, "Failed to retrieve all devices.");
             throw new DatabaseAccessException("Failed to retrieve all devices.", ex);
         }
     }
