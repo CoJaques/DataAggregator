@@ -38,17 +38,17 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
         };
 
         device.Sensors = [.. request.Config.Sensors.Select(sensor => new Sensor
-        {
-            SensorName = sensor.SensorName,
-            SensorType = sensor.Type,
-            Unit = sensor.Unit,
-            Metadata = sensor.Metadata,
-            Device = device,
-        })];
+            {
+                SensorName = sensor.SensorName,
+                SensorType = sensor.Type,
+                Unit = sensor.Unit,
+                Metadata = sensor.Metadata,
+                Device = device,
+            })];
 
         await _deviceRepository.CreateAsync(device);
 
-        return new DeviceRegistrationResponse(true, defaultEndpoint.Endpoint, "GeneratedToken");
+        return new DeviceRegistrationResponse(true, defaultEndpoint.Endpoint, defaultEndpoint.Token);
     }
 
     /// <inheritdoc/>
