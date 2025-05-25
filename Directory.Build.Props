@@ -1,18 +1,20 @@
 <Project>
- <PropertyGroup>
-        <SmartAssemblyIsEnabled>false</SmartAssemblyIsEnabled>
-        <Authors>Colin Jaques</Authors>
-        <Nullable>enable</Nullable>
-        <Platforms>AnyCPU;x86;x64</Platforms>
-        <NeutralLanguage>en</NeutralLanguage>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-      </PropertyGroup>
-      <ItemGroup>
-        <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="All" />
-      </ItemGroup>
-      <ItemGroup>
-        <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" />
-      </ItemGroup>
+  <PropertyGroup>
+    <SmartAssemblyIsEnabled>false</SmartAssemblyIsEnabled>
+    <Authors>Colin Jaques</Authors>
+    <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x86;x64</Platforms>
+    <NeutralLanguage>en</NeutralLanguage>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="!$(MSBuildProjectName.Contains('Test'))">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" />
+  </ItemGroup>
 </Project>

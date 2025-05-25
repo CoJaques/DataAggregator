@@ -1,4 +1,5 @@
 using DataAggregator.Registration.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataAggregator.Registration.Repositories;
 
@@ -12,17 +13,29 @@ namespace DataAggregator.Registration.Repositories;
 public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
 {
     /// <inheritdoc/>
-    public Task<Device> GetByNameAsync(string deviceId) => throw new NotImplementedException();
+    public async Task<Device?> GetByNameAsync(string deviceName)
+        => await context.Devices.Include(d => d.Sensors).FirstOrDefaultAsync(d => d.DeviceName == deviceName);
 
     /// <inheritdoc/>
-    public Task<Device> CreateAsync(Device device) => throw new NotImplementedException();
+    public async Task<Device> CreateAsync(Device device)
+    {
+        context.Devices.Add(device);
+        await context.SaveChangesAsync();
+        return device;
+    }
 
     /// <inheritdoc/>
-    public Task UpdateAsync(Device device) => throw new NotImplementedException();
+    public async Task UpdateAsync(Device device)
+    {
+        context.Devices.Update(device);
+        await context.SaveChangesAsync();
+    }
 
     /// <inheritdoc/>
-    public Task<bool> ExistsAsync(string deviceId) => throw new NotImplementedException();
+    public async Task<bool> ExistsAsync(string deviceId)
+        => await context.Devices.AnyAsync(d => d.DeviceId == deviceId);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<Device>> GetAllAsync() => throw new NotImplementedException();
+    public async Task<IEnumerable<Device>> GetAllAsync()
+        => await context.Devices.Include(d => d.Sensors).ToListAsync();
 }
