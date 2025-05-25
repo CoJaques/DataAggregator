@@ -6,7 +6,7 @@ namespace DataAggregator.Registration.Repositories;
 /// <summary>
 /// Database context for managing device and sensor entities.
 /// </summary>
-public class RegistrationDbContext : DbContext
+public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> options) : DbContext(options)
 {
     /// <summary>
     /// Gets or sets the DbSet for devices.

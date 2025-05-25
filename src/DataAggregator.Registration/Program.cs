@@ -11,11 +11,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator API", Version = "v1" }));
 
 // Configure Entity Framework Core with PostgreSQL
-string? pgHost = Environment.GetEnvironmentVariable("PGHOST");
-string? pgPort = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
-string? pgDb = Environment.GetEnvironmentVariable("PGDATABASE");
-string? pgUser = Environment.GetEnvironmentVariable("PGUSER");
-string? pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
+string? pgHost = builder.Configuration["PGHOST"];
+string? pgPort = builder.Configuration["PGPORT"];
+string? pgDb = builder.Configuration["PGDATABASE"];
+string? pgUser = builder.Configuration["PGUSER"];
+string? pgPassword = builder.Configuration["PGPASSWORD"];
 
 if (string.IsNullOrEmpty(pgHost) || string.IsNullOrEmpty(pgDb) || string.IsNullOrEmpty(pgUser) || string.IsNullOrEmpty(pgPassword))
 {
