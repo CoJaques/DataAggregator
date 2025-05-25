@@ -25,6 +25,7 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
     [HttpPost("register")]
     [ProducesResponseType(typeof(DeviceRegistrationResponse), 200)]
     [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> RegisterDevice([FromBody] DeviceRegistrationRequest request)
     {
         if (request == null || string.IsNullOrWhiteSpace(request.Config.DeviceName))
@@ -32,8 +33,16 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
             return BadRequest("Invalid request payload.");
         }
 
-        DeviceRegistrationResponse response = await _deviceRegistrationService.RegisterCollectorAsync(request);
-        return Ok(response);
+        try
+        {
+            DeviceRegistrationResponse response = await _deviceRegistrationService.RegisterCollectorAsync(request);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            // TODO: Add logging for unexpected error
+            return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -44,6 +53,7 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
     [HttpGet("{deviceName}")]
     [ProducesResponseType(typeof(CollectorInfoDto), 200)]
     [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> GetDeviceInfo(string deviceName)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
@@ -51,8 +61,16 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
             return BadRequest("Device name cannot be null or empty.");
         }
 
-        CollectorInfoDto? deviceInfo = await _deviceRegistrationService.GetCollectorInfoAsync(deviceName);
-        return deviceInfo == null ? NotFound($"Device with name '{deviceName}' not found.") : Ok(deviceInfo);
+        try
+        {
+            CollectorInfoDto? deviceInfo = await _deviceRegistrationService.GetCollectorInfoAsync(deviceName);
+            return deviceInfo == null ? NotFound($"Device with name '{deviceName}' not found.") : Ok(deviceInfo);
+        }
+        catch (Exception ex)
+        {
+            // TODO: Add logging for unexpected error
+            return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -61,9 +79,18 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<CollectorInfoDto>), 200)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> GetAllDevices()
     {
-        IEnumerable<CollectorInfoDto> devices = await _deviceRegistrationService.GetAllCollectorInfoAsync();
-        return Ok(devices);
+        try
+        {
+            IEnumerable<CollectorInfoDto> devices = await _deviceRegistrationService.GetAllCollectorInfoAsync();
+            return Ok(devices);
+        }
+        catch (Exception ex)
+        {
+            // TODO: Add logging for unexpected error
+            return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+        }
     }
 }
