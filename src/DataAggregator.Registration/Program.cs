@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using DataAggregator.Registration.Persistence;
 using DataAggregator.Registration.Repositories;
 using DataAggregator.Registration.Services;
 using DataAggregator.Shared;

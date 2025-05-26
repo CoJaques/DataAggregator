@@ -1,6 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
-namespace DataAggregator.Registration.Entities;
+namespace DataAggregator.Registration.Domain;
 
 /// <summary>
 /// Class representing a sensor associated with a device using to store in DB.
@@ -15,20 +15,16 @@ public class Sensor()
     /// <summary>
     /// Gets or sets the name of the sensor.
     /// </summary>
-    [Required]
-    [MaxLength(100)]
     public string SensorName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the type of the sensor.
     /// </summary>
-    [MaxLength(50)]
     public string SensorType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the unit of measurement for the sensor.
     /// </summary>
-    [MaxLength(50)]
     public string Unit { get; set; } = string.Empty;
 
     /// <summary>
@@ -39,6 +35,6 @@ public class Sensor()
     /// <summary>
     /// Gets or sets the associated device.
     /// </summary>
-    [ForeignKey(nameof(DeviceId))]
-    public Device? Device { get; set; }
+    [DisallowNull]
+    public required Device? Device { get; set; }
 }

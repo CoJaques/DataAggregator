@@ -1,4 +1,4 @@
-using DataAggregator.Registration.Entities;
+using DataAggregator.Registration.Domain;
 
 namespace DataAggregator.Registration.Repositories;
 
