@@ -1,4 +1,4 @@
-using DataAggregator.Registration.Entities;
+using DataAggregator.Registration.Domain;
 using DataAggregator.Registration.Repositories;
 using DataAggregator.Registration.Services;
 using DataAggregator.Shared;
@@ -65,11 +65,15 @@ public class DeviceRegistrationServiceTests
             DeviceName = "Device1",
             Location = "Location1",
             HealthCheckEndpoint = "http://healthcheck",
-            Sensors = new List<Sensor>
-            {
-                new Sensor { SensorName = "Sensor1", SensorType = "Type1", Unit = "Unit1" }
-            }
         };
+
+        var sensors = new List<Sensor>
+        {
+            new() { SensorName = "Sensor1", SensorType = "Type1", Unit = "Unit1", Device = device },
+        };
+
+        device.Sensors = sensors;
+
         _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync("Device1")).ReturnsAsync(device);
 
         // Act

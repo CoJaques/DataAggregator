@@ -1,5 +1,6 @@
-using DataAggregator.Registration.Entities;
+using DataAggregator.Registration.Domain;
 using DataAggregator.Registration.Exceptions;
+using DataAggregator.Registration.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 

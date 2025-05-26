@@ -1,4 +1,4 @@
-using DataAggregator.Registration.Entities;
+using DataAggregator.Registration.Domain;
 using DataAggregator.Registration.Repositories;
 using DataAggregator.Shared;
 using Microsoft.Extensions.Options;
