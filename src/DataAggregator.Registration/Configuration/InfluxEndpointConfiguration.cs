@@ -1,4 +1,4 @@
-namespace DataAggregator.Shared;
+namespace DataAggregator.Registration.Configuration;
 
 /// <summary>
 /// Record which define the configuration for an InfluxDB endpoint.

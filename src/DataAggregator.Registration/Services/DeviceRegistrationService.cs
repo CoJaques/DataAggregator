@@ -1,3 +1,4 @@
+using DataAggregator.Registration.Configuration;
 using DataAggregator.Registration.Domain;
 using DataAggregator.Registration.Repositories;
 using DataAggregator.Shared;
@@ -14,10 +15,10 @@ namespace DataAggregator.Registration.Services;
 /// </remarks>
 /// <param name="deviceRepository">The device repository.</param>
 /// <param name="influxEndpoints">The list of InfluxDB endpoint configurations.</param>
-public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOptions<List<InfluxEndpointConfiguration>> influxEndpoints) : IDeviceRegistrationService
+public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOptions<InfluxEndpointsConfiguration> influxEndpoints) : IDeviceRegistrationService
 {
     private readonly IDeviceRepository _deviceRepository = deviceRepository;
-    private readonly List<InfluxEndpointConfiguration> _influxEndpoints = influxEndpoints.Value;
+    private readonly InfluxEndpointsConfiguration _influxEndpoints = influxEndpoints.Value;
 
     /// <inheritdoc/>
     public async Task<DeviceRegistrationResponse> RegisterCollectorAsync(DeviceRegistrationRequest request)
@@ -114,7 +115,7 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
     /// <returns>The default InfluxDB endpoint configuration.</returns>
     public Task<InfluxEndpointConfiguration> GetAvailableInfluxEndpoint()
     {
-        InfluxEndpointConfiguration? defaultEndpoint = _influxEndpoints.FirstOrDefault(e => e.IsDefault);
+        InfluxEndpointConfiguration? defaultEndpoint = _influxEndpoints.Endpoints.FirstOrDefault(e => e.IsDefault);
         return defaultEndpoint == null
             ? throw new InvalidOperationException("No default InfluxDB endpoint is configured.")
             : Task.FromResult(defaultEndpoint);
