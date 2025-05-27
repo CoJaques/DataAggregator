@@ -1,8 +1,8 @@
 using System.Net.Sockets;
+using DataAggregator.Registration.Configuration;
 using DataAggregator.Registration.Persistence;
 using DataAggregator.Registration.Repositories;
 using DataAggregator.Registration.Services;
-using DataAggregator.Shared;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -45,7 +45,7 @@ builder.Services.AddHealthChecks()
     .AddDbContextCheck<RegistrationDbContext>();
 
 // Bind InfluxEndpoints configuration
-builder.Services.Configure<List<InfluxEndpointConfiguration>>(builder.Configuration.GetSection("InfluxEndpoints"));
+builder.Services.Configure<InfluxEndpointsConfiguration>(builder.Configuration.GetSection("Influx"));
 
 // Register application services
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();

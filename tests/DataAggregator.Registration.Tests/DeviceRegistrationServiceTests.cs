@@ -1,3 +1,4 @@
+using DataAggregator.Registration.Configuration;
 using DataAggregator.Registration.Domain;
 using DataAggregator.Registration.Repositories;
 using DataAggregator.Registration.Services;
@@ -16,9 +17,10 @@ public class DeviceRegistrationServiceTests
     {
         _deviceRepositoryMock = new Mock<IDeviceRepository>();
 
-        var influxEndpoints = new List<InfluxEndpointConfiguration>
+        var influxEndpoints = new InfluxEndpointsConfiguration();
+        influxEndpoints.Endpoints = new List<InfluxEndpointConfiguration>
         {
-            new("DefaultEndpoint", "http://localhost:8086", "default-token", true)
+            new("DefaultEndpoint", "http://localhost:8086", "default-token", true),
         };
 
         _service = new DeviceRegistrationService(_deviceRepositoryMock.Object, Options.Create(influxEndpoints));
