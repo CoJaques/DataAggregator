@@ -1,6 +1,7 @@
+using DataAggregator.Registration.Domain;
 using DataAggregator.Shared;
 
-namespace DataAggregator.Registration.Domain;
+namespace DataAggregator.Registration.DeviceManagement.Domain;
 
 /// <summary>
 /// Class representing a registered device using to store in DB.

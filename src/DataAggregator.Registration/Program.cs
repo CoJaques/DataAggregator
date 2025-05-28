@@ -1,8 +1,9 @@
 using System.Net.Sockets;
-using DataAggregator.Registration.Configuration;
-using DataAggregator.Registration.Persistence;
-using DataAggregator.Registration.Repositories;
-using DataAggregator.Registration.Services;
+using DataAggregator.Registration.DeviceManagement.Persistence;
+using DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
+using DataAggregator.Registration.DeviceManagement.Services;
+using DataAggregator.Registration.InfluxService.Configuration;
+using DataAggregator.Registration.InfluxService.Services;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -50,6 +51,7 @@ builder.Services.Configure<InfluxEndpointsConfiguration>(builder.Configuration.G
 // Register application services
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IDeviceRegistrationService, DeviceRegistrationService>();
+builder.Services.AddScoped<IInfluxEndpointProviderService, InfluxEndpointProviderService>();
 
 WebApplication app = builder.Build();
 

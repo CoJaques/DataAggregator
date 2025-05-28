@@ -1,4 +1,4 @@
-using DataAggregator.Registration.Services;
+using DataAggregator.Registration.DeviceManagement.Services;
 using DataAggregator.Shared;
 using Microsoft.AspNetCore.Mvc;
 
