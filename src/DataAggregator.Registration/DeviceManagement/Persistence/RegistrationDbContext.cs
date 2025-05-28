@@ -1,8 +1,8 @@
-using DataAggregator.Registration.Domain;
-using DataAggregator.Registration.Persistence.Configuration;
+using DataAggregator.Registration.DeviceManagement.Domain;
+using DataAggregator.Registration.DeviceManagement.Persistence.Configuration;
 using Microsoft.EntityFrameworkCore;
 
-namespace DataAggregator.Registration.Persistence;
+namespace DataAggregator.Registration.DeviceManagement.Persistence;
 
 /// <summary>
 /// Database context for managing device and sensor entities.

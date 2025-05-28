@@ -1,6 +1,6 @@
 using DataAggregator.Shared;
 
-namespace DataAggregator.Registration.Services;
+namespace DataAggregator.Registration.DeviceManagement.Services;
 
 /// <summary>
 /// Service interface for device registration operations.

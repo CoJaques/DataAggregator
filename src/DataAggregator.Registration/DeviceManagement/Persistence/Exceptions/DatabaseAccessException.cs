@@ -1,4 +1,4 @@
-namespace DataAggregator.Registration.Exceptions;
+namespace DataAggregator.Registration.DeviceManagement.Persistence.Exceptions;
 
 /// <summary>
 /// Exception thrown when there is an issue accessing the database.

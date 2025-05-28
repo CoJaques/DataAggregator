@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
-using DataAggregator.Registration.Domain;
+using DataAggregator.Registration.DeviceManagement.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace DataAggregator.Registration.Persistence.Configuration;
+namespace DataAggregator.Registration.DeviceManagement.Persistence.Configuration;
 
 /// <summary>
 /// Configuration for the Sensor entity in the database.

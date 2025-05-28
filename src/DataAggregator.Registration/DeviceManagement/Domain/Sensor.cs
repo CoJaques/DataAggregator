@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace DataAggregator.Registration.Domain;
+namespace DataAggregator.Registration.DeviceManagement.Domain;
 
 /// <summary>
 /// Class representing a sensor associated with a device using to store in DB.

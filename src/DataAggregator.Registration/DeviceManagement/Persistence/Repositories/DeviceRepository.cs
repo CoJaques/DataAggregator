@@ -1,10 +1,9 @@
-using DataAggregator.Registration.Domain;
-using DataAggregator.Registration.Exceptions;
-using DataAggregator.Registration.Persistence;
+using DataAggregator.Registration.DeviceManagement.Domain;
+using DataAggregator.Registration.DeviceManagement.Persistence.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace DataAggregator.Registration.Repositories;
+namespace DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
 
 /// <summary>
 /// Repository for managing device-related database operations.

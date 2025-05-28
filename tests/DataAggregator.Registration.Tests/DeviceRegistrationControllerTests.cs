@@ -1,5 +1,5 @@
 using DataAggregator.Registration.Controllers;
-using DataAggregator.Registration.Services;
+using DataAggregator.Registration.DeviceManagement.Services;
 using DataAggregator.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Moq;

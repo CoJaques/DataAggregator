@@ -1,9 +1,9 @@
-using DataAggregator.Registration.Configuration;
+using DataAggregator.Registration.DeviceManagement.Domain;
+using DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
+using DataAggregator.Registration.DeviceManagement.Services;
 using DataAggregator.Registration.Domain;
-using DataAggregator.Registration.Repositories;
-using DataAggregator.Registration.Services;
+using DataAggregator.Registration.InfluxService.Services;
 using DataAggregator.Shared;
-using Microsoft.Extensions.Options;
 using Moq;
 
 namespace DataAggregator.Registration.Tests;
@@ -11,27 +11,24 @@ namespace DataAggregator.Registration.Tests;
 public class DeviceRegistrationServiceTests
 {
     private readonly Mock<IDeviceRepository> _deviceRepositoryMock;
+    private readonly Mock<IInfluxEndpointProviderService> _influxEndpointProviderServiceMock;
     private readonly DeviceRegistrationService _service;
 
     public DeviceRegistrationServiceTests()
     {
         _deviceRepositoryMock = new Mock<IDeviceRepository>();
+        _influxEndpointProviderServiceMock = new Mock<IInfluxEndpointProviderService>();
 
-        var influxEndpoints = new InfluxEndpointsConfiguration
-        {
-            Endpoints =
-            [
-                new("DefaultEndpoint", "http://localhost:8086", "default-token"),
-            ],
-        };
-
-        _service = new DeviceRegistrationService(_deviceRepositoryMock.Object, Options.Create(influxEndpoints));
+        _service = new DeviceRegistrationService(_deviceRepositoryMock.Object, _influxEndpointProviderServiceMock.Object);
     }
 
     [Fact]
     public async Task RegisterCollectorAsync_ShouldReturnSuccess_WhenDeviceIsNew()
     {
         // Arrange
+        var mockEndpoint = new InfluxEndpoint("MockEndpoint", "http://mock-endpoint", "mock-token");
+        _influxEndpointProviderServiceMock.Setup(service => service.GetAvailableEndpointAsync()).ReturnsAsync(mockEndpoint);
+
         var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []));
         _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.Config.DeviceName)).ReturnsAsync((Device?)null);
 
@@ -40,7 +37,7 @@ public class DeviceRegistrationServiceTests
 
         // Assert
         Assert.True(result.IsSuccess);
-        Assert.Equal("http://localhost:8086", result.AssignedTimeSeriesEndpoint);
+        Assert.Equal("http://mock-endpoint", result.AssignedTimeSeriesEndpoint);
         _deviceRepositoryMock.Verify(repo => repo.CreateAsync(It.IsAny<Device>()), Times.Once);
     }
 

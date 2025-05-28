@@ -1,12 +1,11 @@
-using DataAggregator.Registration.Configuration;
+using DataAggregator.Registration.DeviceManagement.Domain;
+using DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
 using DataAggregator.Registration.Domain;
-using DataAggregator.Registration.Helpers;
-using DataAggregator.Registration.Repositories;
+using DataAggregator.Registration.InfluxService.Services;
 using DataAggregator.Shared;
-using Microsoft.Extensions.Options;
 using Serilog;
 
-namespace DataAggregator.Registration.Services;
+namespace DataAggregator.Registration.DeviceManagement.Services;
 
 /// <summary>
 /// Class for handling device registration operations.
@@ -15,23 +14,24 @@ namespace DataAggregator.Registration.Services;
 /// Initializes a new instance of the <see cref="DeviceRegistrationService"/> class.
 /// </remarks>
 /// <param name="deviceRepository">The device repository.</param>
-/// <param name="influxEndpoints">The list of InfluxDB endpoint configurations.</param>
-public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOptions<InfluxEndpointsConfiguration> influxEndpoints) : IDeviceRegistrationService
+/// <param name="influxEndpointProviderService">The InfluxDB endpoint provider service.</param>
+public class DeviceRegistrationService(IDeviceRepository deviceRepository, IInfluxEndpointProviderService influxEndpointProviderService) : IDeviceRegistrationService
 {
-    private readonly InfluxEndpointsConfiguration _influxEndpoints = influxEndpoints.Value;
+    private readonly IDeviceRepository _deviceRepository = deviceRepository;
+    private readonly IInfluxEndpointProviderService _influxEndpointProviderService = influxEndpointProviderService;
 
     /// <inheritdoc/>
     public async Task<DeviceRegistrationResponse> RegisterCollectorAsync(DeviceRegistrationRequest request)
     {
         Log.Information("Registering or updating collector: {DeviceName}", request.Config.DeviceName);
 
-        Device? existingDevice = await deviceRepository.GetByNameAsync(request.Config.DeviceName);
+        Device? existingDevice = await _deviceRepository.GetByNameAsync(request.Config.DeviceName);
 
         if (existingDevice != null)
         {
             Log.Information("Device already exists: {DeviceName}", existingDevice.DeviceName);
 
-            if (!await InfluxHealthCheckHelper.CheckHealthAsync(existingDevice.AssignedInfluxEndpoint))
+            if (!await _influxEndpointProviderService.CheckEndPointValidityAsync(existingDevice.AssignedInfluxEndpoint))
             {
                 Log.Warning("Current endpoint is not functional for device: {DeviceName}", request.Config.DeviceName);
 
@@ -40,11 +40,11 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
                     new EndpointHistory(existingDevice.AssignedInfluxEndpoint, existingDevice.RegistrationDate, DateTime.UtcNow));
 
                 // Assign a new endpoint
-                InfluxEndpoint newEndpoint = await GetAvailableInfluxEndpoint();
+                InfluxEndpoint newEndpoint = await _influxEndpointProviderService.GetAvailableEndpointAsync();
                 existingDevice.AssignedInfluxEndpoint = newEndpoint;
                 existingDevice.RegistrationDate = DateTime.UtcNow;
 
-                await deviceRepository.UpdateAsync(existingDevice);
+                await _deviceRepository.UpdateAsync(existingDevice);
 
                 Log.Information("Assigned new endpoint to device: {DeviceName}", request.Config.DeviceName);
                 return new DeviceRegistrationResponse(true, newEndpoint.Endpoint, newEndpoint.Token);
@@ -54,7 +54,7 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
         }
 
         // Register new device logic...
-        InfluxEndpoint defaultEndpoint = await GetAvailableInfluxEndpoint();
+        InfluxEndpoint defaultEndpoint = await _influxEndpointProviderService.GetAvailableEndpointAsync();
 
         var device = new Device
         {
@@ -77,7 +77,7 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
 
         device.Sensors = sensors.ToList();
 
-        await deviceRepository.CreateAsync(device);
+        await _deviceRepository.CreateAsync(device);
 
         Log.Information("Collector registered successfully: {DeviceName}", request.Config.DeviceName);
         return new DeviceRegistrationResponse(true, defaultEndpoint.Endpoint, defaultEndpoint.Token);
@@ -88,7 +88,7 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
     {
         Log.Information("Fetching collector info: {CollectorName}", collectorName);
 
-        Device? device = await deviceRepository.GetByNameAsync(collectorName);
+        Device? device = await _deviceRepository.GetByNameAsync(collectorName);
 
         if (device is null)
         {
@@ -117,7 +117,7 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
     public async Task<bool> IsCollectorRegisteredAsync(string collectorName)
     {
         Log.Information("Checking if collector is registered: {CollectorName}", collectorName);
-        return await deviceRepository.GetByNameAsync(collectorName) != null;
+        return await _deviceRepository.GetByNameAsync(collectorName) != null;
     }
 
     /// <inheritdoc/>
@@ -125,7 +125,7 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
     {
         Log.Information("Fetching all collector info.");
 
-        IEnumerable<Device> devices = await deviceRepository.GetAllAsync();
+        IEnumerable<Device> devices = await _deviceRepository.GetAllAsync();
 
         Log.Information("All collector info retrieved successfully.");
         return devices.Select(device => new CollectorInfoDto(
@@ -138,28 +138,5 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IOpti
                 sensor.Unit,
                 sensor.Metadata))],
             device.EndpointHistories));
-    }
-
-    /// <summary>
-    /// Gets the available InfluxDB endpoint configuration.
-    /// This method uses the InfluxHealthCheckHelper to check the health of endpoints.
-    /// </summary>
-    /// <returns>The healthy InfluxDB endpoint configuration.</returns>
-    public async Task<InfluxEndpoint> GetAvailableInfluxEndpoint()
-    {
-        foreach (InfluxEndpoint endpoint in _influxEndpoints.Endpoints)
-        {
-            if (await InfluxHealthCheckHelper.CheckHealthAsync(endpoint))
-            {
-                Log.Information("Selected healthy InfluxDB endpoint: {Endpoint}", endpoint.Endpoint);
-                return endpoint;
-            }
-            else
-            {
-                Log.Warning("InfluxDB endpoint is not healthy: {Endpoint}", endpoint.Endpoint);
-            }
-        }
-
-        throw new InvalidOperationException("No healthy InfluxDB endpoint is available.");
     }
 }

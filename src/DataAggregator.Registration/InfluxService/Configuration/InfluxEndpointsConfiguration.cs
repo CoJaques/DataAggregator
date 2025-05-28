@@ -1,6 +1,6 @@
 ﻿using DataAggregator.Shared;
 
-namespace DataAggregator.Registration.Configuration;
+namespace DataAggregator.Registration.InfluxService.Configuration;
 
 /// <summary>
 /// Configuration class for InfluxDB endpoints.

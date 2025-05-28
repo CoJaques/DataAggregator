@@ -1,6 +1,6 @@
-using DataAggregator.Registration.Domain;
+using DataAggregator.Registration.DeviceManagement.Domain;
 
-namespace DataAggregator.Registration.Repositories;
+namespace DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
 
 /// <summary>
 /// Interface defining the contract for device repository operations.
