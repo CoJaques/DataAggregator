@@ -19,7 +19,7 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.Property(d => d.Location).HasMaxLength(200);
         builder.Property(d => d.HealthCheckEndpoint).HasMaxLength(200);
         builder.Property(d => d.RegistrationDate).IsRequired();
-        builder.Property(d => d.AssignedTimeSeriesEndpoint).HasMaxLength(200);
+        builder.Property(d => d.AssignedInfluxEndpoint).HasMaxLength(200);
 
         builder.HasMany(d => d.Sensors)
                .WithOne(s => s.Device)
