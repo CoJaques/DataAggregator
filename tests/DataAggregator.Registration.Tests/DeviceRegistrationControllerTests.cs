@@ -21,7 +21,7 @@ public class DeviceRegistrationControllerTests
     public async Task RegisterDevice_ShouldReturnOk_WhenRequestIsValid()
     {
         // Arrange
-        var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", new List<SensorInfoDto>()));
+        var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []));
         var response = new DeviceRegistrationResponse(true, "http://localhost:8086", "GeneratedToken");
         _serviceMock.Setup(service => service.RegisterCollectorAsync(request)).ReturnsAsync(response);
 
@@ -49,7 +49,7 @@ public class DeviceRegistrationControllerTests
     public async Task GetDeviceInfo_ShouldReturnOk_WhenDeviceExists()
     {
         // Arrange
-        var deviceInfo = new CollectorInfoDto("Device1", "Location1", "http://healthcheck", new List<SensorInfoDto>());
+        var deviceInfo = new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []);
         _serviceMock.Setup(service => service.GetCollectorInfoAsync("Device1")).ReturnsAsync(deviceInfo);
 
         // Act
@@ -81,8 +81,8 @@ public class DeviceRegistrationControllerTests
         // Arrange
         var devices = new List<CollectorInfoDto>
         {
-            new("Device1", "Location1", "http://healthcheck", new List<SensorInfoDto>()),
-            new("Device2", "Location2", "http://healthcheck", new List<SensorInfoDto>())
+            new("Device1", "Location1", "http://healthcheck", [], []),
+            new("Device2", "Location2", "http://healthcheck", [], [])
         };
         _serviceMock.Setup(service => service.GetAllCollectorInfoAsync()).ReturnsAsync(devices);
 

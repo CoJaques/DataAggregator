@@ -1,3 +1,5 @@
+using DataAggregator.Shared;
+
 namespace DataAggregator.Registration.Domain;
 
 /// <summary>
@@ -33,10 +35,15 @@ public class Device
     /// <summary>
     /// Gets or sets the assigned time series endpoint for the device.
     /// </summary>
-    public string AssignedTimeSeriesEndpoint { get; set; } = string.Empty;
+    public required InfluxEndpoint AssignedInfluxEndpoint { get; set; }
 
     /// <summary>
     /// Gets or sets the collection of sensors associated with the device.
     /// </summary>
-    public ICollection<Sensor> Sensors { get; set; } = [];
+    public List<Sensor> Sensors { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the history of assigned time series endpoints.
+    /// </summary>
+    public List<EndpointHistory> EndpointHistories { get; set; } = [];
 }
