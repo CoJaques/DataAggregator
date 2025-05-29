@@ -1,5 +1,5 @@
-using DataAggregator.Registration.Domain;
-using DataAggregator.Shared;
+using DataAggregator.Shared.Configuration.TimeSeries;
+using DataAggregator.Shared.Domain;
 
 namespace DataAggregator.Registration.DeviceManagement.Domain;
 

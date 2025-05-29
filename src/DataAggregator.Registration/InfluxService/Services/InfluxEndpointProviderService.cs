@@ -1,5 +1,5 @@
 using DataAggregator.Registration.InfluxService.Configuration;
-using DataAggregator.Shared;
+using DataAggregator.Shared.Configuration.TimeSeries;
 using Microsoft.Extensions.Options;
 using Serilog;
 

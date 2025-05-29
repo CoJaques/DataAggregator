@@ -1,3 +1,5 @@
+using DataAggregator.Shared.DTOs;
+
 namespace DataAggregator.Shared;
 
 /// <summary>

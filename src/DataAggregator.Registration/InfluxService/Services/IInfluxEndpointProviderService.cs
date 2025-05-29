@@ -1,4 +1,4 @@
-using DataAggregator.Shared;
+using DataAggregator.Shared.Configuration.TimeSeries;
 
 namespace DataAggregator.Registration.InfluxService.Services;
 
