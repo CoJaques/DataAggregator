@@ -21,6 +21,11 @@ services:
       - "5001:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=dataaggregator
+      - PGUSER=admin
+      - PGPASSWORD=password123
     depends_on:
       - postgres
 

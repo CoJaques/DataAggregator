@@ -19,13 +19,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Registration
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Integration.Tests", "tests\DataAggregator.Integration.Tests\DataAggregator.Integration.Tests.csproj", "{12FEEB75-A03A-4389-980B-6B735C550CAC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		Directory.Build.Props = Directory.Build.Props
+		stylecop.json = stylecop.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{4DA834BA-134A-4F58-B6FF-FF0820FB9FA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -53,6 +57,9 @@ Global
 		{12FEEB75-A03A-4389-980B-6B735C550CAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12FEEB75-A03A-4389-980B-6B735C550CAC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{4DA834BA-134A-4F58-B6FF-FF0820FB9FA9} = {E1AD9667-4C40-4CAF-8096-5FA749EBB2B1}
 		{54E71A40-291A-4FEB-9E13-1545172AF9EE} = {E1AD9667-4C40-4CAF-8096-5FA749EBB2B1}
@@ -60,5 +67,8 @@ Global
 		{63D70F2C-9C7D-4397-8150-37F343949530} = {247EF7A2-1DFD-4B51-AC7D-0FD13827CAC2}
 		{FB0B4F80-5801-407F-8425-54069C93DB60} = {247EF7A2-1DFD-4B51-AC7D-0FD13827CAC2}
 		{12FEEB75-A03A-4389-980B-6B735C550CAC} = {247EF7A2-1DFD-4B51-AC7D-0FD13827CAC2}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9C8E6DBA-9F77-4FD0-9A1D-25150F7806FF}
 	EndGlobalSection
 EndGlobal
