@@ -94,7 +94,7 @@ Open `appsettings.json` in the appropriate project (e.g., `Registration`) and ad
 | ------------ | ---------------------------------------------- |
 | Collector    | [http://localhost:5000](http://localhost:5000) |
 | Registration | [http://localhost:5001](http://localhost:5001) |
-| InfluxDB UI  | [http://localhost:8086](http://localhost:8181) |
+| InfluxDB UI  | [http://localhost:8181](http://localhost:8181) |
 | PostgreSQL   | `localhost:5432`                               |
 
 ---
