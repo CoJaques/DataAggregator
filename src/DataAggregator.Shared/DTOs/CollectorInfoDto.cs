@@ -1,6 +1,7 @@
-﻿using DataAggregator.Registration.Domain;
+﻿using DataAggregator.Shared.Configuration.TimeSeries;
+using DataAggregator.Shared.Domain;
 
-namespace DataAggregator.Shared;
+namespace DataAggregator.Shared.DTOs;
 
 /// <summary>
 /// DTO representing information about a collector.

@@ -1,9 +1,11 @@
 using DataAggregator.Registration.DeviceManagement.Domain;
 using DataAggregator.Registration.DeviceManagement.Domain.Extension;
 using DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
-using DataAggregator.Registration.Domain;
 using DataAggregator.Registration.InfluxService.Services;
 using DataAggregator.Shared;
+using DataAggregator.Shared.Configuration.TimeSeries;
+using DataAggregator.Shared.Domain;
+using DataAggregator.Shared.DTOs;
 using Serilog;
 
 namespace DataAggregator.Registration.DeviceManagement.Services;
@@ -27,12 +29,9 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IInfl
 
         Collector? existingDevice = await deviceRepository.GetByNameAsync(request.DeviceName);
 
-        if (existingDevice != null)
-        {
-            return await HandleExistingDeviceAsync(existingDevice, request.DeviceName);
-        }
-
-        return await RegisterNewDeviceAsync(request);
+        return existingDevice != null
+            ? await HandleExistingDeviceAsync(existingDevice, request.DeviceName)
+            : await RegisterNewDeviceAsync(request);
     }
 
     /// <inheritdoc/>

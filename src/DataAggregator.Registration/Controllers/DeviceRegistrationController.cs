@@ -1,5 +1,6 @@
 using DataAggregator.Registration.DeviceManagement.Services;
 using DataAggregator.Shared;
+using DataAggregator.Shared.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DataAggregator.Registration.Controllers;

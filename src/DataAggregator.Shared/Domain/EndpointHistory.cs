@@ -1,6 +1,6 @@
-using DataAggregator.Shared;
+using DataAggregator.Shared.Configuration.TimeSeries;
 
-namespace DataAggregator.Registration.Domain;
+namespace DataAggregator.Shared.Domain;
 
 /// <summary>
 /// Represents the history of a time series endpoint assigned to a device.

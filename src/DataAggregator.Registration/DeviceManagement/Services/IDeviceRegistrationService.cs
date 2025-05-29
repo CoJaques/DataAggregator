@@ -1,4 +1,5 @@
 using DataAggregator.Shared;
+using DataAggregator.Shared.DTOs;
 
 namespace DataAggregator.Registration.DeviceManagement.Services;
 

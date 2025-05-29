@@ -1,4 +1,4 @@
-namespace DataAggregator.Collector;
+namespace DataAggregator.Collector.Configuration;
 
 /// <summary>
 /// Record representing the configuration for a collector device.
