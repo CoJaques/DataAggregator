@@ -1,17 +1,155 @@
+using DataAggregator.Collector.DataCollector.Abstraction;
+using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
+using DataAggregator.Collector.DataCollector.Connectors.CapnProto;
+using DataAggregator.Collector.DataCollector.Connectors.OpenCN;
+using DataAggregator.Collector.DataCollector.DataStorage;
+using DataAggregator.Collector.DataCollector.DataStorage.Influx;
+using DataAggregator.Collector.DataCollector.LocalStorage;
+using DataAggregator.Collector.DataCollector.Registration;
+using Microsoft.Extensions.Options;
+using Serilog;
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// Configure Serilog from appsettings.json
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .WriteTo.Console()
+    .Enrich.FromLogContext()
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+// Add services to the container
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator Collector API", Version = "v1" }));
+
+// Configure collector configuration binding
+builder.Services.Configure<CollectorConfiguration>(builder.Configuration.GetSection("Collector"));
+builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration);
+
+// Configure HTTP clients
+builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("RegistrationClient", client =>
+{
+    string registrationEndpoint = builder.Configuration["RegistrationService:Endpoint"] ?? "http://localhost:5001";
+    client.BaseAddress = new Uri(registrationEndpoint);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+// Register health checks
+builder.Services.AddHealthChecks();
+
+// Register services based on collector type
+string collectorType = builder.Configuration["CollectorType"] ?? "OpenCN";
+
+builder.Services.AddSingleton<DataBufferService>(sp =>
+{
+    int bufferSize = builder.Configuration.GetValue<int>("BufferSettings:MaxBufferSize", 10000);
+    return new DataBufferService(bufferSize);
+});
+
+builder.Services.AddSingleton<RegistrationService>(sp =>
+{
+    IHttpClientFactory httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    HttpClient httpClient = httpClientFactory.CreateClient("RegistrationClient");
+    string registrationEndpoint = builder.Configuration["RegistrationService:Endpoint"] ?? "http://localhost:5001/api/DeviceRegistration/register";
+    return new RegistrationService(httpClient, registrationEndpoint);
+});
+
+// Register collector-specific services based on CollectorType
+if (collectorType.Equals("OpenCN", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddSingleton<IDataSourceConnector>(sp =>
+    {
+        OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+        return new CapnProtoConnector(config.CapnProto);
+    });
+
+    builder.Services.AddSingleton<IDataRepository>(sp =>
+    {
+        OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+        return new InfluxDbRepository(config.InfluxDB);
+    });
+
+    builder.Services.AddSingleton<CollectorService>(sp =>
+    {
+        OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+        IDataSourceConnector dataSourceConnector = sp.GetRequiredService<IDataSourceConnector>();
+        IDataRepository dataRepository = sp.GetRequiredService<IDataRepository>();
+        RegistrationService registrationService = sp.GetRequiredService<RegistrationService>();
+        return new OpenCnCollectorService(
+            dataSourceConnector,
+            dataRepository,
+            registrationService,
+            config);
+    });
+}
+else
+{
+    Log.Fatal($"Unsupported collector type: {collectorType}");
+    throw new InvalidOperationException($"Unsupported collector type: {collectorType}");
+}
 
 WebApplication app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DataAggregator Collector API v1");
+        c.RoutePrefix = string.Empty;
+    });
 }
 
 app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+app.MapHealthChecks("/health");
 
-app.Run();
+// Start the collector service on application startup
+app.Lifetime.ApplicationStarted.Register(async () =>
+{
+    try
+    {
+        Log.Information("Starting collector service...");
+        CollectorService collectorService = app.Services.GetRequiredService<CollectorService>();
+        await collectorService.StartAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Fatal(ex, "Failed to start collector service.");
+    }
+});
+
+// Stop the collector service on application shutdown
+app.Lifetime.ApplicationStopping.Register(async () =>
+{
+    try
+    {
+        Log.Information("Stopping collector service...");
+        CollectorService collectorService = app.Services.GetRequiredService<CollectorService>();
+        await collectorService.StopAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error while stopping collector service.");
+    }
+});
+
+try
+{
+    Log.Information("Starting the collector application...");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Collector application failed to start.");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
