@@ -21,7 +21,7 @@ public class DeviceRegistrationControllerTests
     public async Task RegisterDevice_ShouldReturnOk_WhenRequestIsValid()
     {
         // Arrange
-        var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []));
+        var request = new DeviceRegistrationRequest("Device1", "Location1", "http://healthcheck", []);
         var response = new DeviceRegistrationResponse(true, "http://localhost:8086", "GeneratedToken");
         _serviceMock.Setup(service => service.RegisterCollectorAsync(request)).ReturnsAsync(response);
 
@@ -38,8 +38,10 @@ public class DeviceRegistrationControllerTests
     [Fact]
     public async Task RegisterDevice_ShouldReturnBadRequest_WhenRequestIsInvalid()
     {
+        var request = new DeviceRegistrationRequest(" ", "Location1", "", []);
+
         // Act
-        var result = await _controller.RegisterDevice(null!);
+        var result = await _controller.RegisterDevice(request);
 
         // Assert
         Assert.IsType<BadRequestObjectResult>(result);
@@ -49,7 +51,7 @@ public class DeviceRegistrationControllerTests
     public async Task GetDeviceInfo_ShouldReturnOk_WhenDeviceExists()
     {
         // Arrange
-        var deviceInfo = new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []);
+        var deviceInfo = new CollectorInfoDto("Device1", "Location1", "http://healthcheck", new("name", "endpoint", "token"), [], []);
         _serviceMock.Setup(service => service.GetCollectorInfoAsync("Device1")).ReturnsAsync(deviceInfo);
 
         // Act
@@ -81,8 +83,8 @@ public class DeviceRegistrationControllerTests
         // Arrange
         var devices = new List<CollectorInfoDto>
         {
-            new("Device1", "Location1", "http://healthcheck", [], []),
-            new("Device2", "Location2", "http://healthcheck", [], [])
+            new("Device1", "Location1", "http://healthcheck",new("", "", ""), [], []),
+            new("Device2", "Location2", "http://healthcheck",new("", "", ""), [], [])
         };
         _serviceMock.Setup(service => service.GetAllCollectorInfoAsync()).ReturnsAsync(devices);
 

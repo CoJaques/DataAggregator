@@ -1,4 +1,5 @@
 using DataAggregator.Registration.DeviceManagement.Domain;
+using DataAggregator.Registration.DeviceManagement.Domain.Extension;
 using DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
 using DataAggregator.Registration.Domain;
 using DataAggregator.Registration.InfluxService.Services;
@@ -17,56 +18,96 @@ namespace DataAggregator.Registration.DeviceManagement.Services;
 /// <param name="influxEndpointProviderService">The InfluxDB endpoint provider service.</param>
 public class DeviceRegistrationService(IDeviceRepository deviceRepository, IInfluxEndpointProviderService influxEndpointProviderService) : IDeviceRegistrationService
 {
-    private readonly IDeviceRepository _deviceRepository = deviceRepository;
-    private readonly IInfluxEndpointProviderService _influxEndpointProviderService = influxEndpointProviderService;
+    #region Interface implementation
 
     /// <inheritdoc/>
     public async Task<DeviceRegistrationResponse> RegisterCollectorAsync(DeviceRegistrationRequest request)
     {
-        Log.Information("Registering or updating collector: {DeviceName}", request.Config.DeviceName);
+        Log.Information("Registering or updating collector: {DeviceName}", request.DeviceName);
 
-        Device? existingDevice = await _deviceRepository.GetByNameAsync(request.Config.DeviceName);
+        Collector? existingDevice = await deviceRepository.GetByNameAsync(request.DeviceName);
 
         if (existingDevice != null)
         {
-            Log.Information("Device already exists: {DeviceName}", existingDevice.DeviceName);
-
-            if (!await _influxEndpointProviderService.CheckEndPointValidityAsync(existingDevice.AssignedInfluxEndpoint))
-            {
-                Log.Warning("Current endpoint is not functional for device: {DeviceName}", request.Config.DeviceName);
-
-                // Update endpoint history
-                existingDevice.EndpointHistories.Add(
-                    new EndpointHistory(existingDevice.AssignedInfluxEndpoint, existingDevice.RegistrationDate, DateTime.UtcNow));
-
-                // Assign a new endpoint
-                InfluxEndpoint newEndpoint = await _influxEndpointProviderService.GetAvailableEndpointAsync();
-                existingDevice.AssignedInfluxEndpoint = newEndpoint;
-                existingDevice.RegistrationDate = DateTime.UtcNow;
-
-                await _deviceRepository.UpdateAsync(existingDevice);
-
-                Log.Information("Assigned new endpoint to device: {DeviceName}", request.Config.DeviceName);
-                return new DeviceRegistrationResponse(true, newEndpoint.Endpoint, newEndpoint.Token);
-            }
-
-            return new DeviceRegistrationResponse(false, existingDevice.AssignedInfluxEndpoint.Endpoint, existingDevice.AssignedInfluxEndpoint.Token);
+            return await HandleExistingDeviceAsync(existingDevice, request.DeviceName);
         }
 
-        // Register new device logic...
-        InfluxEndpoint defaultEndpoint = await _influxEndpointProviderService.GetAvailableEndpointAsync();
+        return await RegisterNewDeviceAsync(request);
+    }
 
-        var device = new Device
+    /// <inheritdoc/>
+    public async Task<CollectorInfoDto?> GetCollectorInfoAsync(string collectorName)
+    {
+        Log.Information("Fetching collector info: {CollectorName}", collectorName);
+
+        Collector? device = await deviceRepository.GetByNameAsync(collectorName);
+
+        if (device is null)
         {
-            DeviceName = request.Config.DeviceName,
-            Location = request.Config.Location,
-            HealthCheckEndpoint = request.Config.HealthCheckEndpoint,
+            Log.Warning("Collector not found: {CollectorName}", collectorName);
+            return null;
+        }
+
+        Log.Information("Collector info retrieved successfully: {CollectorName}", collectorName);
+        return device.ToDto();
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsCollectorRegisteredAsync(string collectorName)
+    {
+        Log.Information("Checking if collector is registered: {CollectorName}", collectorName);
+        return await deviceRepository.GetByNameAsync(collectorName) != null;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<CollectorInfoDto>> GetAllCollectorInfoAsync()
+    {
+        IEnumerable<Collector> devices = await deviceRepository.GetAllAsync();
+        return devices.Select(device => device.ToDto());
+    }
+    #endregion
+
+    #region private methods
+
+    private async Task<DeviceRegistrationResponse> HandleExistingDeviceAsync(Collector existingDevice, string deviceName)
+    {
+        Log.Information("Device already exists: {DeviceName}", deviceName);
+
+        if (!await influxEndpointProviderService.CheckEndPointValidityAsync(existingDevice.AssignedInfluxEndpoint))
+        {
+            Log.Warning("Current endpoint is not functional for device: {DeviceName}", deviceName);
+
+            existingDevice.EndpointHistories.Add(
+                new EndpointHistory(existingDevice.AssignedInfluxEndpoint, existingDevice.RegistrationDate, DateTime.UtcNow));
+
+            InfluxEndpoint newEndpoint = await influxEndpointProviderService.GetAvailableEndpointAsync();
+            existingDevice.AssignedInfluxEndpoint = newEndpoint;
+            existingDevice.RegistrationDate = DateTime.UtcNow;
+
+            await deviceRepository.UpdateAsync(existingDevice);
+
+            Log.Information("Assigned new endpoint to device: {DeviceName}", deviceName);
+            return new DeviceRegistrationResponse(true, newEndpoint.Endpoint, newEndpoint.Token);
+        }
+
+        return new DeviceRegistrationResponse(false, existingDevice.AssignedInfluxEndpoint.Endpoint, existingDevice.AssignedInfluxEndpoint.Token);
+    }
+
+    private async Task<DeviceRegistrationResponse> RegisterNewDeviceAsync(DeviceRegistrationRequest request)
+    {
+        InfluxEndpoint defaultEndpoint = await influxEndpointProviderService.GetAvailableEndpointAsync();
+
+        var device = new Collector
+        {
+            DeviceName = request.DeviceName,
+            Location = request.Location,
+            HealthCheckEndpoint = request.HealthCheckEndpoint,
             RegistrationDate = DateTime.UtcNow,
             AssignedInfluxEndpoint = defaultEndpoint,
             EndpointHistories = [],
         };
 
-        IEnumerable<Sensor> sensors = request.Config.Sensors.Select(sensor => new Sensor
+        IEnumerable<Sensor> sensors = request.Sensors.Select(sensor => new Sensor
         {
             SensorName = sensor.SensorName,
             SensorType = sensor.Type,
@@ -75,68 +116,12 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IInfl
             Device = device,
         });
 
-        device.Sensors = sensors.ToList();
+        device.Sensors = [.. sensors];
 
-        await _deviceRepository.CreateAsync(device);
+        await deviceRepository.CreateAsync(device);
 
-        Log.Information("Collector registered successfully: {DeviceName}", request.Config.DeviceName);
+        Log.Information("Collector registered successfully: {DeviceName}", request.DeviceName);
         return new DeviceRegistrationResponse(true, defaultEndpoint.Endpoint, defaultEndpoint.Token);
     }
-
-    /// <inheritdoc/>
-    public async Task<CollectorInfoDto?> GetCollectorInfoAsync(string collectorName)
-    {
-        Log.Information("Fetching collector info: {CollectorName}", collectorName);
-
-        Device? device = await _deviceRepository.GetByNameAsync(collectorName);
-
-        if (device is null)
-        {
-            Log.Warning("Collector not found: {CollectorName}", collectorName);
-            return null;
-        }
-
-        var sensors = device.Sensors.Select(
-            sensor =>
-            new SensorInfoDto(
-                sensor.SensorName,
-                sensor.SensorType,
-                sensor.Unit,
-                sensor.Metadata)).ToList();
-
-        Log.Information("Collector info retrieved successfully: {CollectorName}", collectorName);
-        return new CollectorInfoDto(
-            device.DeviceName,
-            device.Location,
-            device.HealthCheckEndpoint,
-            sensors,
-            device.EndpointHistories);
-    }
-
-    /// <inheritdoc/>
-    public async Task<bool> IsCollectorRegisteredAsync(string collectorName)
-    {
-        Log.Information("Checking if collector is registered: {CollectorName}", collectorName);
-        return await _deviceRepository.GetByNameAsync(collectorName) != null;
-    }
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<CollectorInfoDto>> GetAllCollectorInfoAsync()
-    {
-        Log.Information("Fetching all collector info.");
-
-        IEnumerable<Device> devices = await _deviceRepository.GetAllAsync();
-
-        Log.Information("All collector info retrieved successfully.");
-        return devices.Select(device => new CollectorInfoDto(
-            device.DeviceName,
-            device.Location,
-            device.HealthCheckEndpoint,
-            [.. device.Sensors.Select(sensor => new SensorInfoDto(
-                sensor.SensorName,
-                sensor.SensorType,
-                sensor.Unit,
-                sensor.Metadata))],
-            device.EndpointHistories));
-    }
+    #endregion
 }

@@ -29,8 +29,8 @@ public class DeviceRegistrationServiceTests
         var mockEndpoint = new InfluxEndpoint("MockEndpoint", "http://mock-endpoint", "mock-token");
         _influxEndpointProviderServiceMock.Setup(service => service.GetAvailableEndpointAsync()).ReturnsAsync(mockEndpoint);
 
-        var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []));
-        _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.Config.DeviceName)).ReturnsAsync((Device?)null);
+        var request = new DeviceRegistrationRequest("Device1", "Location1", "http://healthcheck", []);
+        _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.DeviceName)).ReturnsAsync((Collector?)null);
 
         // Act
         var result = await _service.RegisterCollectorAsync(request);
@@ -38,7 +38,7 @@ public class DeviceRegistrationServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Equal("http://mock-endpoint", result.AssignedTimeSeriesEndpoint);
-        _deviceRepositoryMock.Verify(repo => repo.CreateAsync(It.IsAny<Device>()), Times.Once);
+        _deviceRepositoryMock.Verify(repo => repo.CreateAsync(It.IsAny<Collector>()), Times.Once);
     }
 
     [Fact]
@@ -46,9 +46,9 @@ public class DeviceRegistrationServiceTests
     {
         // Arrange
         var mockEndpoint = new InfluxEndpoint("MockEndpoint", "http://mock-endpoint", "mock-token");
-        var existingDevice = new Device { DeviceName = "Device1", AssignedInfluxEndpoint = mockEndpoint };
-        var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []));
-        _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.Config.DeviceName)).ReturnsAsync(existingDevice);
+        var existingDevice = new Collector { DeviceName = "Device1", AssignedInfluxEndpoint = mockEndpoint };
+        var request = new DeviceRegistrationRequest("Device1", "Location1", "http://healthcheck", []);
+        _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.DeviceName)).ReturnsAsync(existingDevice);
         _influxEndpointProviderServiceMock.Setup(service => service.CheckEndPointValidityAsync(mockEndpoint)).ReturnsAsync(true);
 
         // Act
@@ -56,7 +56,7 @@ public class DeviceRegistrationServiceTests
 
         // Assert
         Assert.False(result.IsSuccess);
-        _deviceRepositoryMock.Verify(repo => repo.CreateAsync(It.IsAny<Device>()), Times.Never);
+        _deviceRepositoryMock.Verify(repo => repo.CreateAsync(It.IsAny<Collector>()), Times.Never);
     }
 
     [Fact]
@@ -66,17 +66,17 @@ public class DeviceRegistrationServiceTests
         var mockEndpoint = new InfluxEndpoint("MockEndpoint", "http://mock-endpoint", "mock-token");
         var newMockEndpoint = new InfluxEndpoint("NewMockEndpoint", "http://new-mock-endpoint", "new-mock-token");
 
-        var existingDevice = new Device
+        var existingDevice = new Collector
         {
             DeviceName = "Device1",
             AssignedInfluxEndpoint = mockEndpoint,
             RegistrationDate = DateTime.UtcNow.AddMonths(-1),
         };
 
-        var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []));
+        var request = new DeviceRegistrationRequest("Device1", "Location1", "http://healthcheck", []);
 
-        _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.Config.DeviceName)).ReturnsAsync(existingDevice);
-        _deviceRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<Device>())).Verifiable();
+        _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.DeviceName)).ReturnsAsync(existingDevice);
+        _deviceRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<Collector>())).Verifiable();
         _influxEndpointProviderServiceMock.Setup(service => service.CheckEndPointValidityAsync(mockEndpoint)).ReturnsAsync(false);
         _influxEndpointProviderServiceMock.Setup(service => service.GetAvailableEndpointAsync()).ReturnsAsync(newMockEndpoint);
 
@@ -89,7 +89,7 @@ public class DeviceRegistrationServiceTests
         Assert.Equal("new-mock-token", result.DeviceToken);
         Assert.Single(existingDevice.EndpointHistories);
         Assert.Equal(mockEndpoint.Endpoint, existingDevice.EndpointHistories[0].Endpoint.Endpoint);
-        _deviceRepositoryMock.Verify(repo => repo.UpdateAsync(It.IsAny<Device>()), Times.Once);
+        _deviceRepositoryMock.Verify(repo => repo.UpdateAsync(It.IsAny<Collector>()), Times.Once);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class DeviceRegistrationServiceTests
         var mockEndpoint = new InfluxEndpoint("Name", "Endpoint", "token");
 
         // Arrange
-        var device = new Device
+        var device = new Collector
         {
             DeviceName = "Device1",
             Location = "Location1",
@@ -130,7 +130,7 @@ public class DeviceRegistrationServiceTests
         var mockEndpoint = new InfluxEndpoint("Name", "Endpoint", "token");
 
         // Arrange
-        var device = new Device
+        var device = new Collector
         {
             DeviceName = "Device1",
             Location = "Location1",
@@ -158,7 +158,7 @@ public class DeviceRegistrationServiceTests
     public async Task GetCollectorInfoAsync_ShouldReturnNull_WhenDeviceDoesNotExist()
     {
         // Arrange
-        _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync("Device1")).ReturnsAsync((Device?)null);
+        _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync("Device1")).ReturnsAsync((Collector?)null);
 
         // Act
         var result = await _service.GetCollectorInfoAsync("Device1");
@@ -173,10 +173,10 @@ public class DeviceRegistrationServiceTests
         InfluxEndpoint mockEnpoint = new InfluxEndpoint("default", "http://localhost:8086", "token");
 
         // Arrange
-        var devices = new List<Device>
+        var devices = new List<Collector>
         {
-            new Device { DeviceName = "Device1", AssignedInfluxEndpoint = mockEnpoint, Location = "Location1", HealthCheckEndpoint = "http://healthcheck", Sensors = new List<Sensor>() },
-            new Device { DeviceName = "Device2", AssignedInfluxEndpoint = mockEnpoint, Location = "Location2", HealthCheckEndpoint = "http://healthcheck", Sensors = new List<Sensor>() },
+            new Collector { DeviceName = "Device1", AssignedInfluxEndpoint = mockEnpoint, Location = "Location1", HealthCheckEndpoint = "http://healthcheck", Sensors = new List<Sensor>() },
+            new Collector { DeviceName = "Device2", AssignedInfluxEndpoint = mockEnpoint, Location = "Location2", HealthCheckEndpoint = "http://healthcheck", Sensors = new List<Sensor>() },
         };
         _deviceRepositoryMock.Setup(repo => repo.GetAllAsync()).ReturnsAsync(devices);
 

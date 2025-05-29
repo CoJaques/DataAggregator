@@ -6,7 +6,7 @@ namespace DataAggregator.Registration.DeviceManagement.Domain;
 /// <summary>
 /// Class representing a registered device using to store in DB.
 /// </summary>
-public class Device
+public class Collector
 {
     /// <summary>
     /// Gets or sets the unique identifier of the device.

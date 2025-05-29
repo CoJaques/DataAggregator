@@ -9,5 +9,6 @@ public record CollectorInfoDto(
     string DeviceName,
     string Location,
     string HealthCheckEndpoint,
+    InfluxEndpoint AssignedInfluxEndpoint,
     List<SensorInfoDto> Sensors,
     List<EndpointHistory> EndpointHistories);
