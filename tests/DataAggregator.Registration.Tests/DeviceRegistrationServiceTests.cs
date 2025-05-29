@@ -42,12 +42,14 @@ public class DeviceRegistrationServiceTests
     }
 
     [Fact]
-    public async Task RegisterCollectorAsync_ShouldReturnFailure_WhenDeviceAlreadyExists()
+    public async Task RegisterCollectorAsync_ShouldReturnFailure_WhenDeviceAlreadyExistsAndEndpointIsHealthy()
     {
         // Arrange
-        var existingDevice = new Device { DeviceName = "Device1", AssignedInfluxEndpoint = new("", "", "") };
+        var mockEndpoint = new InfluxEndpoint("MockEndpoint", "http://mock-endpoint", "mock-token");
+        var existingDevice = new Device { DeviceName = "Device1", AssignedInfluxEndpoint = mockEndpoint };
         var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []));
         _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.Config.DeviceName)).ReturnsAsync(existingDevice);
+        _influxEndpointProviderServiceMock.Setup(service => service.CheckEndPointValidityAsync(mockEndpoint)).ReturnsAsync(true);
 
         // Act
         var result = await _service.RegisterCollectorAsync(request);
@@ -60,9 +62,10 @@ public class DeviceRegistrationServiceTests
     [Fact]
     public async Task RegisterCollectorAsync_ShouldUpdateEndpointHistory_WhenEndpointIsNonFunctional()
     {
-        var mockEndpoint = new InfluxEndpoint("Name", "Endpoint", "token");
-
         // Arrange
+        var mockEndpoint = new InfluxEndpoint("MockEndpoint", "http://mock-endpoint", "mock-token");
+        var newMockEndpoint = new InfluxEndpoint("NewMockEndpoint", "http://new-mock-endpoint", "new-mock-token");
+
         var existingDevice = new Device
         {
             DeviceName = "Device1",
@@ -70,18 +73,22 @@ public class DeviceRegistrationServiceTests
             RegistrationDate = DateTime.UtcNow.AddMonths(-1),
         };
 
-        var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", new List<SensorInfoDto>(), new List<EndpointHistory>()));
+        var request = new DeviceRegistrationRequest(new CollectorInfoDto("Device1", "Location1", "http://healthcheck", [], []));
 
         _deviceRepositoryMock.Setup(repo => repo.GetByNameAsync(request.Config.DeviceName)).ReturnsAsync(existingDevice);
         _deviceRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<Device>())).Verifiable();
+        _influxEndpointProviderServiceMock.Setup(service => service.CheckEndPointValidityAsync(mockEndpoint)).ReturnsAsync(false);
+        _influxEndpointProviderServiceMock.Setup(service => service.GetAvailableEndpointAsync()).ReturnsAsync(newMockEndpoint);
 
         // Act
         var result = await _service.RegisterCollectorAsync(request);
 
         // Assert
         Assert.True(result.IsSuccess);
-        Assert.NotEqual("http://old-endpoint", result.AssignedTimeSeriesEndpoint);
-        Assert.Equal("default-token", result.DeviceToken);
+        Assert.Equal("http://new-mock-endpoint", result.AssignedTimeSeriesEndpoint);
+        Assert.Equal("new-mock-token", result.DeviceToken);
+        Assert.Single(existingDevice.EndpointHistories);
+        Assert.Equal(mockEndpoint.Endpoint, existingDevice.EndpointHistories[0].Endpoint.Endpoint);
         _deviceRepositoryMock.Verify(repo => repo.UpdateAsync(It.IsAny<Device>()), Times.Once);
     }
 
