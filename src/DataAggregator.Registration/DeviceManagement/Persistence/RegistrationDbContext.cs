@@ -12,7 +12,7 @@ public class RegistrationDbContext(DbContextOptions<RegistrationDbContext> optio
     /// <summary>
     /// Gets or sets the collection of devices in the database.
     /// </summary>
-    public DbSet<Device> Devices { get; set; } = null!;
+    public DbSet<Collector> Devices { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the collection of sensors in the database.

@@ -28,7 +28,7 @@ public class DeviceRegistrationController(IDeviceRegistrationService deviceRegis
     [ProducesResponseType(500)]
     public async Task<IActionResult> RegisterDevice([FromBody] DeviceRegistrationRequest request)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.Config.DeviceName))
+        if (string.IsNullOrWhiteSpace(request.DeviceName) || string.IsNullOrWhiteSpace(request.HealthCheckEndpoint))
         {
             return BadRequest("Invalid request payload.");
         }

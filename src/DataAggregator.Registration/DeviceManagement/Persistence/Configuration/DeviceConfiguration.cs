@@ -7,10 +7,10 @@ namespace DataAggregator.Registration.DeviceManagement.Persistence.Configuration
 /// <summary>
 /// Configuration for the Device entity in the database.
 /// </summary>
-public class DeviceConfiguration : IEntityTypeConfiguration<Device>
+public class DeviceConfiguration : IEntityTypeConfiguration<Collector>
 {
     /// <inheritdoc/>
-    public void Configure(EntityTypeBuilder<Device> builder)
+    public void Configure(EntityTypeBuilder<Collector> builder)
     {
         builder.HasKey(d => d.Id);
         builder.Property(d => d.Id).HasColumnType("uuid");

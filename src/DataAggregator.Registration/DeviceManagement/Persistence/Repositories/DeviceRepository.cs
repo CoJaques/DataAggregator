@@ -15,7 +15,7 @@ namespace DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
 public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
 {
     /// <inheritdoc/>
-    public async Task<Device?> GetByNameAsync(string deviceName)
+    public async Task<Collector?> GetByNameAsync(string deviceName)
     {
         try
         {
@@ -30,7 +30,7 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     }
 
     /// <inheritdoc/>
-    public async Task<Device> CreateAsync(Device device)
+    public async Task<Collector> CreateAsync(Collector device)
     {
         try
         {
@@ -48,7 +48,7 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     }
 
     /// <inheritdoc/>
-    public async Task UpdateAsync(Device device)
+    public async Task UpdateAsync(Collector device)
     {
         try
         {
@@ -80,7 +80,7 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<Device>> GetAllAsync()
+    public async Task<IEnumerable<Collector>> GetAllAsync()
     {
         try
         {

@@ -36,5 +36,5 @@ public class Sensor()
     /// Gets or sets the associated device.
     /// </summary>
     [DisallowNull]
-    public required Device? Device { get; set; }
+    public required Collector? Device { get; set; }
 }
