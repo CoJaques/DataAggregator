@@ -20,7 +20,6 @@ public class InfluxDbRepository : IDataRepository, IDisposable
     private InfluxDBClient? _client;
     private InfluxEndpoint? _config;
     private bool _isConfigured;
-    private bool _isConnected = false;
     #endregion
 
     #region Constructor & Initialization
@@ -52,7 +51,6 @@ public class InfluxDbRepository : IDataRepository, IDisposable
             InitializeClient();
             _initializationService.EndpointRenewed += async (s, e) => await HandleEndpointRenewalAsync(e);
             _isConfigured = true;
-            _isConnected = true;
 
             Log.Information("InfluxDB repository initialized with endpoint: {Endpoint}", _config.Endpoint);
         }
@@ -87,7 +85,6 @@ public class InfluxDbRepository : IDataRepository, IDisposable
             _config = newConfig;
             _client?.Dispose();
             InitializeClient();
-            _isConnected = true;
 
             Log.Information("InfluxDB client updated with new endpoint: {Endpoint}", _config.Endpoint);
         }
@@ -95,7 +92,6 @@ public class InfluxDbRepository : IDataRepository, IDisposable
         {
             Log.Error(ex, "Failed to update InfluxDB client after endpoint renewal");
             _isConfigured = false;
-            _isConnected = false;
         }
         finally
         {
@@ -172,7 +168,6 @@ public class InfluxDbRepository : IDataRepository, IDisposable
         }
 
         Log.Error("Failed to renew endpoint, data insertion failed");
-        _isConnected = false;
         return false;
     }
 

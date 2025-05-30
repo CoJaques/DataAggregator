@@ -3,51 +3,40 @@ using DataAggregator.Collector.DataCollector.DataStorage;
 using DataAggregator.Collector.DataCollector.LocalStorage;
 using DataAggregator.Collector.DataCollector.Models;
 using DataAggregator.Collector.DataCollector.Registration;
+using DataAggregator.Shared.Configuration.TimeSeries;
 using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.Abstraction;
 
+// TODO CJS -> Read and clean
+
 /// <summary>
 /// Abstract base class for collector services.
 /// </summary>
-public abstract class CollectorService
+/// <remarks>
+/// Initializes a new instance of the <see cref="CollectorService"/> class.
+/// </remarks>
+/// <param name="dataSourceConnector">The data source connector.</param>
+/// <param name="dataRepository">The data repository.</param>
+/// <param name="initializationService">The collector initialization service.</param>
+/// <param name="dataBufferService">The data buffer service.</param>
+/// <param name="configuration">The collector configuration.</param>
+public abstract class CollectorService(
+    IDataSourceConnector dataSourceConnector,
+    IDataRepository dataRepository,
+    CollectorInitializationService initializationService,
+    DataBufferService dataBufferService,
+    CollectorConfiguration configuration)
 {
-    private readonly IDataSourceConnector _dataSourceConnector;
-    private readonly IDataRepository _dataRepository;
-    private readonly CollectorInitializationService _initializationService;
-    private readonly DataBufferService _dataBufferService;
-    private readonly CollectorConfiguration _configuration;
+    private readonly SemaphoreSlim _processingLock = new(1, 1);
 
     private bool _isRunning;
     private CancellationTokenSource? _cancellationTokenSource;
-    private readonly SemaphoreSlim _processingLock = new(1, 1);
 
     /// <summary>
     /// Gets the timestamp of the last data sent successfully.
     /// </summary>
     public DateTime LastDataSent { get; private set; } = DateTime.MinValue;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CollectorService"/> class.
-    /// </summary>
-    /// <param name="dataSourceConnector">The data source connector.</param>
-    /// <param name="dataRepository">The data repository.</param>
-    /// <param name="initializationService">The collector initialization service.</param>
-    /// <param name="dataBufferService">The data buffer service.</param>
-    /// <param name="configuration">The collector configuration.</param>
-    protected CollectorService(
-        IDataSourceConnector dataSourceConnector,
-        IDataRepository dataRepository,
-        CollectorInitializationService initializationService,
-        DataBufferService dataBufferService,
-        CollectorConfiguration configuration)
-    {
-        _dataSourceConnector = dataSourceConnector;
-        _dataRepository = dataRepository;
-        _initializationService = initializationService;
-        _dataBufferService = dataBufferService;
-        _configuration = configuration;
-    }
 
     /// <summary>
     /// Starts the collector service asynchronously.
@@ -57,23 +46,23 @@ public abstract class CollectorService
     {
         if (_isRunning)
         {
-            Log.Debug("Collector service is already running for device {DeviceName}", _configuration.DeviceName);
+            Log.Debug("Collector service is already running for device {DeviceName}", configuration.DeviceName);
             return;
         }
 
-        Log.Information("Starting collector service for device {DeviceName}", _configuration.DeviceName);
+        Log.Information("Starting collector service for device {DeviceName}", configuration.DeviceName);
 
         try
         {
             // Initialize the collector by registering with the central service
-            await _initializationService.InitializeAsync();
+            await initializationService.InitializeAsync();
 
             // Initialize the data repository with the endpoint configuration
-            await _dataRepository.InitializeAsync();
+            await dataRepository.InitializeAsync();
 
             // Connect to the data source
-            DataStorage.Influx.InfluxDbConfig influxConfig = _initializationService.GetInfluxConfig();
-            await _dataSourceConnector.ConnectAsync(influxConfig.Endpoint);
+            InfluxEndpoint influxConfig = initializationService.GetInfluxConfig();
+            await dataSourceConnector.ConnectAsync(influxConfig.Endpoint);
 
             _cancellationTokenSource = new CancellationTokenSource();
             _isRunning = true;
@@ -84,11 +73,11 @@ public abstract class CollectorService
             // Start the data collection loop
             _ = Task.Run(DataCollectionLoopAsync);
 
-            Log.Information("Collector service started for device {DeviceName}", _configuration.DeviceName);
+            Log.Information("Collector service started for device {DeviceName}", configuration.DeviceName);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to start collector service for device {DeviceName}", _configuration.DeviceName);
+            Log.Error(ex, "Failed to start collector service for device {DeviceName}", configuration.DeviceName);
             _isRunning = false;
             _cancellationTokenSource?.Cancel();
             throw;
@@ -103,11 +92,11 @@ public abstract class CollectorService
     {
         if (!_isRunning)
         {
-            Log.Debug("Collector service is not running for device {DeviceName}", _configuration.DeviceName);
+            Log.Debug("Collector service is not running for device {DeviceName}", configuration.DeviceName);
             return;
         }
 
-        Log.Information("Stopping collector service for device {DeviceName}", _configuration.DeviceName);
+        Log.Information("Stopping collector service for device {DeviceName}", configuration.DeviceName);
 
         _isRunning = false;
         _cancellationTokenSource?.Cancel();
@@ -115,16 +104,16 @@ public abstract class CollectorService
         try
         {
             // Disconnect from the data source
-            await _dataSourceConnector.DisconnectAsync();
+            await dataSourceConnector.DisconnectAsync();
 
             // Process any remaining data in the buffer
             await ProcessBufferedDataAsync();
 
-            Log.Information("Collector service stopped for device {DeviceName}", _configuration.DeviceName);
+            Log.Information("Collector service stopped for device {DeviceName}", configuration.DeviceName);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error while stopping collector service for device {DeviceName}", _configuration.DeviceName);
+            Log.Error(ex, "Error while stopping collector service for device {DeviceName}", configuration.DeviceName);
         }
     }
 
@@ -142,7 +131,7 @@ public abstract class CollectorService
                 try
                 {
                     // Fetch data from the source
-                    IEnumerable<IMeasurementData> data = await _dataSourceConnector.FetchDataAsync();
+                    IEnumerable<IMeasurementData> data = await dataSourceConnector.FetchDataAsync();
 
                     // Process the data
                     if (data.Any())
@@ -301,13 +290,12 @@ public abstract class CollectorService
         try
         {
             // Try to insert the data
-            bool success = await _dataRepository.BulkInsertAsync(typedData);
+            bool success = await dataRepository.BulkInsertAsync(typedData, configuration);
 
             if (!success)
             {
                 // Buffer the data if insertion failed
-                int buffered = _dataBufferService.AddRange(typedData);
-                Log.Warning("Buffered {Count} measurements of type {Type}", buffered, typeof(T).Name);
+                dataBufferService.AddRange(typedData);
                 return false;
             }
 
@@ -315,11 +303,14 @@ public abstract class CollectorService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error inserting data of type {Type}, buffering {Count} measurements",
-                typeof(T).Name, data.Count);
+            Log.Error(
+                ex,
+                "Error inserting data of type {Type}, buffering {Count} measurements",
+                typeof(T).Name,
+                data.Count);
 
             // Buffer the data if insertion fails
-            _dataBufferService.AddRange(data);
+            dataBufferService.AddRange(data);
             return false;
         }
     }
@@ -330,7 +321,7 @@ public abstract class CollectorService
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task ProcessBufferedDataAsync()
     {
-        IEnumerable<IMeasurementData> bufferedData = _dataBufferService.GetAndClearBuffer();
+        IEnumerable<IMeasurementData> bufferedData = dataBufferService.GetAndClearBuffer();
         if (bufferedData.Any())
         {
             Log.Information("Processing {Count} items from buffer", bufferedData.Count());

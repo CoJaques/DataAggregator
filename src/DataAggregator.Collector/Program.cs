@@ -80,7 +80,7 @@ if (collectorType.Equals("OpenCN", StringComparison.OrdinalIgnoreCase))
     builder.Services.AddSingleton<IDataSourceConnector>(sp =>
     {
         OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
-        return new CapnProtoConnector(config.CapnProto, config);
+        return new CapnProtoConnector(config);
     });
 
     // Setup data repository with initialization service

@@ -3,34 +3,31 @@ using DataAggregator.Collector.DataCollector.DataStorage;
 using DataAggregator.Collector.DataCollector.LocalStorage;
 using DataAggregator.Collector.DataCollector.Models;
 using DataAggregator.Collector.DataCollector.Registration;
+using DataAggregator.Shared.Domain.DataType;
 using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.Connectors.OpenCN;
 
 // TODO CJS -> To clean
+
 /// <summary>
 /// Collector service implementation for OpenCN.
 /// </summary>
-public class OpenCnCollectorService : CollectorService
+/// <remarks>
+/// Initializes a new instance of the <see cref="OpenCnCollectorService"/> class.
+/// </remarks>
+/// <param name="dataSourceConnector">The data source connector.</param>
+/// <param name="dataRepository">The data repository.</param>
+/// <param name="initializationService">The collector initialization service.</param>
+/// <param name="dataBufferService">The data buffer service.</param>
+/// <param name="configuration">The OpenCN collector configuration.</param>
+public class OpenCnCollectorService(
+    IDataSourceConnector dataSourceConnector,
+    IDataRepository dataRepository,
+    CollectorInitializationService initializationService,
+    DataBufferService dataBufferService,
+    OpenCnCollectorConfiguration configuration) : CollectorService(dataSourceConnector, dataRepository, initializationService, dataBufferService, configuration)
 {
-    private readonly OpenCnCollectorConfiguration _openCnConfiguration;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OpenCnCollectorService"/> class.
-    /// </summary>
-    /// <param name="dataSourceConnector">The data source connector.</param>
-    /// <param name="dataRepository">The data repository.</param>
-    /// <param name="initializationService">The collector initialization service.</param>
-    /// <param name="dataBufferService">The data buffer service.</param>
-    /// <param name="configuration">The OpenCN collector configuration.</param>
-    public OpenCnCollectorService(
-        IDataSourceConnector dataSourceConnector,
-        IDataRepository dataRepository,
-        CollectorInitializationService initializationService,
-        DataBufferService dataBufferService,
-        OpenCnCollectorConfiguration configuration)
-        : base(dataSourceConnector, dataRepository, initializationService, dataBufferService, configuration) => _openCnConfiguration = configuration;
-
     /// <summary>
     /// Validates OpenCN data to ensure it meets specific criteria.
     /// </summary>
@@ -41,7 +38,7 @@ public class OpenCnCollectorService : CollectorService
         Log.Debug("Validating OpenCN data for sensor {SensorId}", data.SensorName);
 
         // Find the sensor configuration matching this data
-        OpenCnSensorConfig? sensorConfig = _openCnConfiguration.Sensors.FirstOrDefault(s => s.Name == data.SensorName);
+        OpenCnSensorConfig? sensorConfig = configuration.Sensors.FirstOrDefault(s => s.Name == data.SensorName);
 
         if (sensorConfig == null)
         {
@@ -50,12 +47,14 @@ public class OpenCnCollectorService : CollectorService
         }
 
         // Verify the data type matches the expected type
-        Type expectedType = sensorConfig.GetClrType();
+        Type expectedType = sensorConfig.DataType.GetClrType();
         if (data.ValueType != expectedType)
         {
             Log.Warning(
                 "Data type mismatch for sensor {SensorName}. Expected {Expected}, got {Actual}",
-                data.SensorName, expectedType.Name, data.ValueType.Name);
+                data.SensorName,
+                expectedType.Name,
+                data.ValueType.Name);
             return false;
         }
 
@@ -79,7 +78,7 @@ public class OpenCnCollectorService : CollectorService
         Log.Debug("Enriching data with OpenCN metadata for sensor {SensorId}", data.SensorName);
 
         // Find the sensor configuration for additional metadata
-        OpenCnSensorConfig? sensorConfig = _openCnConfiguration.Sensors.FirstOrDefault(s => s.Name == data.SensorName);
+        OpenCnSensorConfig? sensorConfig = configuration.Sensors.FirstOrDefault(s => s.Name == data.SensorName);
 
         if (sensorConfig == null)
         {
@@ -97,21 +96,21 @@ public class OpenCnCollectorService : CollectorService
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task HandleOpenCnSpecificLogic()
     {
-        Log.Information("Handling OpenCN specific logic with sampling rate {SamplingRate}Hz", _openCnConfiguration.SamplingRate);
+        Log.Information("Handling OpenCN specific logic with sampling rate {SamplingRate}Hz", configuration.SamplingRate);
 
         // Example of using OpenCN-specific configuration
-        if (!string.IsNullOrEmpty(_openCnConfiguration.CfgString))
+        if (!string.IsNullOrEmpty(configuration.CfgString))
         {
-            Log.Debug("Processing OpenCN configuration: {CfgString}", _openCnConfiguration.CfgString);
+            Log.Debug("Processing OpenCN configuration: {CfgString}", configuration.CfgString);
 
             // Parse and apply configuration
         }
 
         // Apply sampling rate configuration
-        Log.Debug("Setting sampling rate to {SamplingRate}Hz", _openCnConfiguration.SamplingRate);
+        Log.Debug("Setting sampling rate to {SamplingRate}Hz", configuration.SamplingRate);
 
         // Check all pin configurations
-        foreach (OpenCnSensorConfig sensor in _openCnConfiguration.Sensors.OfType<OpenCnSensorConfig>())
+        foreach (OpenCnSensorConfig sensor in configuration.Sensors.OfType<OpenCnSensorConfig>())
         {
             Log.Debug("Configuring pin {PinName} for sensor {SensorName}", sensor.PinName, sensor.Name);
 
