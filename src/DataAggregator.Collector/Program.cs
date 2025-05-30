@@ -99,7 +99,7 @@ if (collectorType.Equals("OpenCN", StringComparison.OrdinalIgnoreCase))
         CollectorInitializationService initService = sp.GetRequiredService<CollectorInitializationService>();
         DataBufferService dataBufferService = sp.GetRequiredService<DataBufferService>();
 
-        return new OpenCnCollectorService(
+        return new CollectorService(
             dataSourceConnector,
             dataRepository,
             initService,
