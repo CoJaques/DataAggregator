@@ -1,4 +1,4 @@
-namespace DataAggregator.Collector.DataCollector.Abstraction.Configuration;
+namespace DataAggregator.Shared.Domain.DataType;
 
 /// <summary>
 /// Enum définissant les types de valeurs supportées par les capteurs.
