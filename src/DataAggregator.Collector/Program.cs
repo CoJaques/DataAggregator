@@ -25,9 +25,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator Collector API", Version = "v1" }));
 
-// Configure collector configuration binding
-builder.Services.Configure<CollectorConfiguration>(builder.Configuration.GetSection("Collector"));
-builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration);
+SetupConfiguration(builder);
 
 // Configure HTTP clients
 builder.Services.AddHttpClient();
@@ -54,7 +52,15 @@ builder.Services.AddSingleton<RegistrationService>(sp =>
 {
     IHttpClientFactory httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
     HttpClient httpClient = httpClientFactory.CreateClient("RegistrationClient");
-    string registrationEndpoint = builder.Configuration["RegistrationService:Endpoint"] ?? "http://localhost:5001/api/DeviceRegistration/register";
+
+    string? registrationEndpoint = builder.Configuration["RegistrationService:Endpoint"];
+
+    if (string.IsNullOrEmpty(registrationEndpoint))
+    {
+        Log.Warning("Registration service endpoint not configured, using default: http://localhost:5001/api/DeviceRegistration/register");
+        registrationEndpoint = "http://localhost:5001/api/DeviceRegistration/register";
+    }
+
     return new RegistrationService(httpClient, registrationEndpoint);
 });
 
@@ -152,4 +158,21 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+static void SetupConfiguration(WebApplicationBuilder builder)
+{
+    // Configure collector configuration binding
+    builder.Services.Configure<CollectorConfiguration>(builder.Configuration.GetSection("Collector"));
+
+    if (builder.Configuration["CollectorType"]?.Equals("OpenCn", StringComparison.OrdinalIgnoreCase) == true)
+    {
+        // Configure OpenCN collector specific settings
+        builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration);
+    }
+    else
+    {
+        Log.Warning("Collector type not specified or unsupported, application will close");
+        throw new InvalidOperationException("Collector type not specified or unsupported. Please check your configuration.");
+    }
 }

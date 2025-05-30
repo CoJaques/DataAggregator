@@ -26,11 +26,9 @@ public class RegistrationService(HttpClient httpClient, string registrationEndpo
         {
             Log.Information("Registering collector {DeviceId} with registration service", config.DeviceName);
 
-            // Convert configuration to registration request
             var sensorDtos = config.Sensors.Select(s => new SensorInfoDto(s.Name, s.Type, s.Unit, s.Metadata)).ToList();
             var request = new DeviceRegistrationRequest(config.DeviceName, config.Location, config.HealthCheckEndpoint, sensorDtos);
 
-            // Send registration request
             HttpResponseMessage response = await httpClient.PostAsJsonAsync(registrationEndpoint, request);
 
             if (!response.IsSuccessStatusCode)
