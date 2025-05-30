@@ -1,61 +1,39 @@
 using DataAggregator.Collector.DataCollector.Abstraction;
 using DataAggregator.Collector.DataCollector.Connectors.OpenCN;
 using DataAggregator.Collector.DataCollector.Models;
+using DataAggregator.Shared.Domain.DataType;
 using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.Connectors.CapnProto;
 
+// TODO CJS -> Implement Cap'n Proto connector for actual data fetching and connection handling
+
 /// <summary>
 /// Connector for Cap'n Proto data source.
 /// </summary>
-public class CapnProtoConnector : IDataSourceConnector
+/// <remarks>
+/// Initializes a new instance of the <see cref="CapnProtoConnector"/> class.
+/// </remarks>
+/// <remarks>
+/// Initializes a new instance of the <see cref="CapnProtoConnector"/> class with OpenCN configuration.
+/// </remarks>
+/// <param name="config">The collector configuration.</param>
+public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSourceConnector
 {
-    private readonly string _serverAddress;
-    private readonly int _port;
-    private readonly int _timeoutMs;
-    private readonly OpenCnCollectorConfiguration? _openCnConfig;
-
-    private bool _isConnected;
+    #region Private Fields
     private readonly Random _random = new();
-    private readonly Dictionary<string, SensorDataType> _sensorTypeMap = [];
+    private bool _isConnected;
+    #endregion
+
+    #region Properties
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CapnProtoConnector"/> class.
+    /// Gets the configuration settings for the OpenCn collector.
     /// </summary>
-    /// <param name="config">The Cap'n Proto configuration.</param>
-    public CapnProtoConnector(CapnProtoConfig config)
-    {
-        _serverAddress = config.ServerAddress;
-        _port = config.Port;
-        _timeoutMs = config.TimeoutMs;
-    }
+    public required OpenCnCollectorConfiguration OpenCnConfig { get; init; } = config;
+    #endregion
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CapnProtoConnector"/> class with OpenCN configuration.
-    /// </summary>
-    /// <param name="config">The Cap'n Proto configuration.</param>
-    /// <param name="openCnConfig">The OpenCN configuration for sensor mapping.</param>
-    public CapnProtoConnector(CapnProtoConfig config, OpenCnCollectorConfiguration openCnConfig)
-        : this(config)
-    {
-        _openCnConfig = openCnConfig;
-
-        // Build sensor type map from OpenCN configuration
-        if (_openCnConfig?.Sensors != null)
-        {
-            foreach (OpenCnSensorConfig sensor in _openCnConfig.Sensors)
-            {
-                if (sensor is OpenCnSensorConfig openCnSensor)
-                {
-                    _sensorTypeMap[openCnSensor.Name] = openCnSensor.DataType;
-                }
-                else
-                {
-                    _sensorTypeMap[sensor.Name] = sensor.DataType;
-                }
-            }
-        }
-    }
+    #region Public Methods
 
     /// <inheritdoc/>
     public async Task ConnectAsync(string endpoint)
@@ -66,7 +44,10 @@ public class CapnProtoConnector : IDataSourceConnector
             await DisconnectAsync();
         }
 
-        Log.Information("Connecting to Cap'n Proto server at {ServerAddress}:{Port}", _serverAddress, _port);
+        Log.Information(
+            "Connecting to Cap'n Proto server at {ServerAddress}:{Port}",
+            OpenCnConfig.CapnProto.ServerAddress,
+            OpenCnConfig.CapnProto.Port);
 
         try
         {
@@ -81,7 +62,12 @@ public class CapnProtoConnector : IDataSourceConnector
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to connect to Cap'n Proto server at {ServerAddress}:{Port}", _serverAddress, _port);
+            Log.Error(
+                ex,
+                "Failed to connect to Cap'n Proto server at {ServerAddress}:{Port}",
+                OpenCnConfig.CapnProto.ServerAddress,
+                OpenCnConfig.CapnProto.Port);
+
             _isConnected = false;
             throw;
         }
@@ -93,10 +79,13 @@ public class CapnProtoConnector : IDataSourceConnector
         if (!_isConnected)
         {
             Log.Warning("Attempted to fetch data while not connected");
-            return Enumerable.Empty<IMeasurementData>();
+            return [];
         }
 
-        Log.Debug("Fetching data from Cap'n Proto server at {ServerAddress}:{Port}", _serverAddress, _port);
+        Log.Debug(
+            "Fetching data from Cap'n Proto server at {ServerAddress}:{Port}",
+            OpenCnConfig.CapnProto.ServerAddress,
+            OpenCnConfig.CapnProto.Port);
 
         try
         {
@@ -112,7 +101,7 @@ public class CapnProtoConnector : IDataSourceConnector
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching data from Cap'n Proto server");
-            return Enumerable.Empty<IMeasurementData>();
+            return [];
         }
     }
 
@@ -146,6 +135,9 @@ public class CapnProtoConnector : IDataSourceConnector
             throw;
         }
     }
+    #endregion
+
+    #region Private Methods
 
     private IEnumerable<IMeasurementData> GenerateSampleData()
     {
@@ -153,9 +145,9 @@ public class CapnProtoConnector : IDataSourceConnector
         var result = new List<IMeasurementData>();
 
         // If we have OpenCN configuration, use it to generate data based on the configured sensors
-        if (_openCnConfig?.Sensors != null && _openCnConfig.Sensors.Any())
+        if (OpenCnConfig?.Sensors != null && OpenCnConfig.Sensors.Count != 0)
         {
-            foreach (OpenCnSensorConfig sensor in _openCnConfig.Sensors)
+            foreach (OpenCnSensorConfig sensor in OpenCnConfig.Sensors)
             {
                 // Generate value based on sensor's data type
                 switch (sensor.DataType)
@@ -189,4 +181,5 @@ public class CapnProtoConnector : IDataSourceConnector
 
         return result;
     }
+    #endregion
 }

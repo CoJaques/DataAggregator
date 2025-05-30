@@ -7,6 +7,7 @@ using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.Connectors.OpenCN;
 
+// TODO CJS -> To clean
 /// <summary>
 /// Collector service implementation for OpenCN.
 /// </summary>

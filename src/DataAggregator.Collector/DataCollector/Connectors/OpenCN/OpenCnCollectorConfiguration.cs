@@ -1,6 +1,6 @@
 using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
 using DataAggregator.Collector.DataCollector.Connectors.CapnProto;
-using DataAggregator.Collector.DataCollector.DataStorage.Influx;
+using DataAggregator.Shared.Domain.DataType;
 
 namespace DataAggregator.Collector.DataCollector.Connectors.OpenCN;
 
@@ -23,11 +23,6 @@ public class OpenCnCollectorConfiguration : CollectorConfiguration
     /// Gets or sets the CapnProto configuration.
     /// </summary>
     public CapnProtoConfig CapnProto { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets the InfluxDB configuration.
-    /// </summary>
-    public InfluxDbConfig InfluxDB { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the list of sensors configured for this OpenCN collector.
