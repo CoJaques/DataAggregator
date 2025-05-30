@@ -28,10 +28,7 @@ public class OpenCnCollectorService : CollectorService
         CollectorInitializationService initializationService,
         DataBufferService dataBufferService,
         OpenCnCollectorConfiguration configuration)
-        : base(dataSourceConnector, dataRepository, initializationService, dataBufferService, configuration)
-    {
-        _openCnConfiguration = configuration;
-    }
+        : base(dataSourceConnector, dataRepository, initializationService, dataBufferService, configuration) => _openCnConfiguration = configuration;
 
     /// <summary>
     /// Validates OpenCN data to ensure it meets specific criteria.
@@ -43,7 +40,7 @@ public class OpenCnCollectorService : CollectorService
         Log.Debug("Validating OpenCN data for sensor {SensorId}", data.SensorName);
 
         // Find the sensor configuration matching this data
-        var sensorConfig = _openCnConfiguration.Sensors.FirstOrDefault(s => s.Name == data.SensorName);
+        OpenCnSensorConfig? sensorConfig = _openCnConfiguration.Sensors.FirstOrDefault(s => s.Name == data.SensorName);
 
         if (sensorConfig == null)
         {
@@ -55,7 +52,8 @@ public class OpenCnCollectorService : CollectorService
         Type expectedType = sensorConfig.GetClrType();
         if (data.ValueType != expectedType)
         {
-            Log.Warning("Data type mismatch for sensor {SensorName}. Expected {Expected}, got {Actual}",
+            Log.Warning(
+                "Data type mismatch for sensor {SensorName}. Expected {Expected}, got {Actual}",
                 data.SensorName, expectedType.Name, data.ValueType.Name);
             return false;
         }
@@ -80,7 +78,7 @@ public class OpenCnCollectorService : CollectorService
         Log.Debug("Enriching data with OpenCN metadata for sensor {SensorId}", data.SensorName);
 
         // Find the sensor configuration for additional metadata
-        var sensorConfig = _openCnConfiguration.Sensors.FirstOrDefault(s => s.Name == data.SensorName);
+        OpenCnSensorConfig? sensorConfig = _openCnConfiguration.Sensors.FirstOrDefault(s => s.Name == data.SensorName);
 
         if (sensorConfig == null)
         {
@@ -89,7 +87,6 @@ public class OpenCnCollectorService : CollectorService
 
         // TODO: Implement OpenCN-specific enrichment
         // This could include adding pin information, sampling rate, or other OpenCN-specific metadata
-
         return data;
     }
 
@@ -105,6 +102,7 @@ public class OpenCnCollectorService : CollectorService
         if (!string.IsNullOrEmpty(_openCnConfiguration.CfgString))
         {
             Log.Debug("Processing OpenCN configuration: {CfgString}", _openCnConfiguration.CfgString);
+
             // Parse and apply configuration
         }
 
@@ -112,9 +110,10 @@ public class OpenCnCollectorService : CollectorService
         Log.Debug("Setting sampling rate to {SamplingRate}Hz", _openCnConfiguration.SamplingRate);
 
         // Check all pin configurations
-        foreach (var sensor in _openCnConfiguration.Sensors.OfType<OpenCnSensorConfig>())
+        foreach (OpenCnSensorConfig sensor in _openCnConfiguration.Sensors.OfType<OpenCnSensorConfig>())
         {
             Log.Debug("Configuring pin {PinName} for sensor {SensorName}", sensor.PinName, sensor.Name);
+
             // Apply pin-specific configuration
         }
 

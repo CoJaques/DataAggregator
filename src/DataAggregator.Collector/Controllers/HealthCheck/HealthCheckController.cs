@@ -55,7 +55,7 @@ public class HealthCheckController : ControllerBase
                 LastDataSent = _collectorService.LastDataSent,
                 BufferSize = _dataBufferService.GetBufferSize(),
                 DatabaseConnected = true, // Default value
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.UtcNow,
             };
 
             // Determine actual health status based on various checks
@@ -66,7 +66,7 @@ public class HealthCheckController : ControllerBase
             }
 
             // Check if we haven't sent data for a long time
-            if (_collectorService.LastDataSent == DateTime.MinValue || 
+            if (_collectorService.LastDataSent == DateTime.MinValue ||
                 (DateTime.UtcNow - _collectorService.LastDataSent).TotalMinutes > 5)
             {
                 healthStatus.Status = "Degraded";
@@ -76,7 +76,7 @@ public class HealthCheckController : ControllerBase
             // Check if the endpoint was configured
             try
             {
-                var config = _initializationService.GetInfluxConfig();
+                DataCollector.DataStorage.Influx.InfluxDbConfig config = _initializationService.GetInfluxConfig();
                 healthStatus.Endpoint = config.Endpoint;
             }
             catch

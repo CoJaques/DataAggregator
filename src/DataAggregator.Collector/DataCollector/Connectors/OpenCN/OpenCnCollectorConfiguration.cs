@@ -10,7 +10,7 @@ namespace DataAggregator.Collector.DataCollector.Connectors.OpenCN;
 public class OpenCnCollectorConfiguration : CollectorConfiguration
 {
     /// <summary>
-    /// Gets or sets the configuration string for OpenCN.
+    /// Gets the configuration string for OpenCN.
     /// </summary>
     public string CfgString => GetConfigString();
 

@@ -71,11 +71,11 @@ if (collectorType.Equals("OpenCN", StringComparison.OrdinalIgnoreCase))
     // Setup the collector initialization service
     builder.Services.AddSingleton<CollectorInitializationService>(sp =>
     {
-        var registrationService = sp.GetRequiredService<RegistrationService>();
-        var config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+        RegistrationService registrationService = sp.GetRequiredService<RegistrationService>();
+        OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
         return new CollectorInitializationService(registrationService, config);
     });
-    
+
     // Setup data source connector
     builder.Services.AddSingleton<IDataSourceConnector>(sp =>
     {
@@ -86,7 +86,7 @@ if (collectorType.Equals("OpenCN", StringComparison.OrdinalIgnoreCase))
     // Setup data repository with initialization service
     builder.Services.AddSingleton<IDataRepository>(sp =>
     {
-        var initService = sp.GetRequiredService<CollectorInitializationService>();
+        CollectorInitializationService initService = sp.GetRequiredService<CollectorInitializationService>();
         return new InfluxDbRepository(initService);
     });
 
@@ -98,7 +98,7 @@ if (collectorType.Equals("OpenCN", StringComparison.OrdinalIgnoreCase))
         IDataRepository dataRepository = sp.GetRequiredService<IDataRepository>();
         CollectorInitializationService initService = sp.GetRequiredService<CollectorInitializationService>();
         DataBufferService dataBufferService = sp.GetRequiredService<DataBufferService>();
-        
+
         return new OpenCnCollectorService(
             dataSourceConnector,
             dataRepository,
@@ -137,10 +137,11 @@ app.Lifetime.ApplicationStarted.Register(async () =>
     try
     {
         Log.Information("Starting collector service...");
+
         // First initialize the collector service
-        var initService = app.Services.GetRequiredService<CollectorInitializationService>();
+        CollectorInitializationService initService = app.Services.GetRequiredService<CollectorInitializationService>();
         await initService.InitializeAsync();
-        
+
         // Then start the collector service
         CollectorService collectorService = app.Services.GetRequiredService<CollectorService>();
         await collectorService.StartAsync();
