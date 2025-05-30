@@ -122,11 +122,7 @@ public class CollectorInitializationService(
                 return false;
             }
 
-            var newConfig = new InfluxDbConfig
-            {
-                Endpoint = response.AssignedTimeSeriesEndpoint,
-                Token = response.DeviceToken,
-            };
+            var newConfig = new InfluxDbConfig(response.AssignedTimeSeriesEndpoint, response.DeviceToken);
 
             // Check if endpoint actually changed
             bool changed = _influxConfig == null ||

@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
 using DataAggregator.Collector.DataCollector.Models;
 using DataAggregator.Collector.DataCollector.Registration;
+using DataAggregator.Shared.Configuration.TimeSeries;
 using InfluxDB3.Client;
 using InfluxDB3.Client.Write;
 using Serilog;
@@ -17,8 +18,9 @@ public class InfluxDbRepository : IDataRepository, IDisposable
     private readonly CollectorInitializationService _initializationService;
     private readonly SemaphoreSlim _configLock = new(1, 1);
     private InfluxDBClient? _client;
-    private InfluxDbConfig? _config;
+    private InfluxEndpoint? _config;
     private bool _isConfigured;
+    private bool _isConnected = false;
     #endregion
 
     #region Constructor & Initialization
@@ -50,6 +52,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
             InitializeClient();
             _initializationService.EndpointRenewed += async (s, e) => await HandleEndpointRenewalAsync(e);
             _isConfigured = true;
+            _isConnected = true;
 
             Log.Information("InfluxDB repository initialized with endpoint: {Endpoint}", _config.Endpoint);
         }
@@ -76,7 +79,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
         Log.Information("InfluxDB client initialized with endpoint: {Endpoint}", _config.Endpoint);
     }
 
-    private async Task HandleEndpointRenewalAsync(InfluxDbConfig newConfig)
+    private async Task HandleEndpointRenewalAsync(InfluxEndpoint newConfig)
     {
         await _configLock.WaitAsync();
         try
@@ -84,6 +87,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
             _config = newConfig;
             _client?.Dispose();
             InitializeClient();
+            _isConnected = true;
 
             Log.Information("InfluxDB client updated with new endpoint: {Endpoint}", _config.Endpoint);
         }
@@ -91,6 +95,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
         {
             Log.Error(ex, "Failed to update InfluxDB client after endpoint renewal");
             _isConfigured = false;
+            _isConnected = false;
         }
         finally
         {
@@ -167,6 +172,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
         }
 
         Log.Error("Failed to renew endpoint, data insertion failed");
+        _isConnected = false;
         return false;
     }
 
@@ -207,5 +213,8 @@ public class InfluxDbRepository : IDataRepository, IDisposable
         _initializationService.EndpointRenewed -= async (s, e) => await HandleEndpointRenewalAsync(e);
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> IsConnectedAsync()
+        => _config is not null && await _config.CheckEndPointValidityAsync();
     #endregion
 }
