@@ -20,7 +20,7 @@ public interface IMeasurementData
     /// <summary>
     /// Gets the type of the measurement value.
     /// </summary>
-    public Type ValueType => typeof(object);
+    public Type ValueType { get; }
 
     /// <summary>
     /// Gets the raw value of the measurement as an object.
