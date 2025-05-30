@@ -18,7 +18,7 @@ public interface IDataSourceConnector
     /// Fetches data from the data source asynchronously.
     /// </summary>
     /// <returns>A <see cref="Task"/> that represents the asynchronous operation. The task result contains a collection of measurement data.</returns>
-    public Task<IEnumerable<MeasurementData>> FetchDataAsync();
+    public Task<IEnumerable<IMeasurementData>> FetchDataAsync();
 
     /// <summary>
     /// Checks if the connector is connected to the data source asynchronously.
