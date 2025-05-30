@@ -24,6 +24,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator Collector API", Version = "v1" }));
 
+// Get collector type from configuration
+string collectorType = builder.Configuration["CollectorType"] ?? "OpenCN";
+
+// Setup configuration based on collector type
 SetupConfiguration(builder);
 
 // Configure HTTP clients
@@ -38,9 +42,7 @@ builder.Services.AddHttpClient("RegistrationClient", client =>
 // Register health checks
 builder.Services.AddHealthChecks();
 
-// Register services based on collector type
-string collectorType = builder.Configuration["CollectorType"] ?? "OpenCN";
-
+// Register common services
 builder.Services.AddSingleton<DataBufferService>(sp =>
 {
     int bufferSize = builder.Configuration.GetValue<int>("BufferSettings:MaxBufferSize", 10000);
@@ -66,28 +68,42 @@ builder.Services.AddSingleton<RegistrationService>(sp =>
 // Register collector-specific services based on CollectorType
 if (collectorType.Equals("OpenCN", StringComparison.OrdinalIgnoreCase))
 {
+    // Setup the collector initialization service
+    builder.Services.AddSingleton<CollectorInitializationService>(sp =>
+    {
+        var registrationService = sp.GetRequiredService<RegistrationService>();
+        var config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+        return new CollectorInitializationService(registrationService, config);
+    });
+    
+    // Setup data source connector
     builder.Services.AddSingleton<IDataSourceConnector>(sp =>
     {
         OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
-        return new CapnProtoConnector(config.CapnProto);
+        return new CapnProtoConnector(config.CapnProto, config);
     });
 
+    // Setup data repository with initialization service
     builder.Services.AddSingleton<IDataRepository>(sp =>
     {
-        OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
-        return new InfluxDbRepository(config.InfluxDB);
+        var initService = sp.GetRequiredService<CollectorInitializationService>();
+        return new InfluxDbRepository(initService);
     });
 
+    // Setup OpenCN collector service
     builder.Services.AddSingleton<CollectorService>(sp =>
     {
         OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
         IDataSourceConnector dataSourceConnector = sp.GetRequiredService<IDataSourceConnector>();
         IDataRepository dataRepository = sp.GetRequiredService<IDataRepository>();
-        RegistrationService registrationService = sp.GetRequiredService<RegistrationService>();
+        CollectorInitializationService initService = sp.GetRequiredService<CollectorInitializationService>();
+        DataBufferService dataBufferService = sp.GetRequiredService<DataBufferService>();
+        
         return new OpenCnCollectorService(
             dataSourceConnector,
             dataRepository,
-            registrationService,
+            initService,
+            dataBufferService,
             config);
     });
 }
@@ -121,6 +137,11 @@ app.Lifetime.ApplicationStarted.Register(async () =>
     try
     {
         Log.Information("Starting collector service...");
+        // First initialize the collector service
+        var initService = app.Services.GetRequiredService<CollectorInitializationService>();
+        await initService.InitializeAsync();
+        
+        // Then start the collector service
         CollectorService collectorService = app.Services.GetRequiredService<CollectorService>();
         await collectorService.StartAsync();
     }
