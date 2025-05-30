@@ -1,49 +1,54 @@
+using System.Net.Sockets;
+using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
 using DataAggregator.Collector.DataCollector.Models;
 using DataAggregator.Collector.DataCollector.Registration;
+using InfluxDB3.Client;
+using InfluxDB3.Client.Write;
 using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.DataStorage.Influx;
 
 /// <summary>
-/// Repository implementation for InfluxDB time series database.
+/// Implementation of a data repository for InfluxDB time series database.
 /// </summary>
-public class InfluxDbRepository : IDataRepository
+public class InfluxDbRepository : IDataRepository, IDisposable
 {
+    #region Private Fields
     private readonly CollectorInitializationService _initializationService;
     private readonly SemaphoreSlim _configLock = new(1, 1);
-
-    private readonly object? _client;
-
+    private InfluxDBClient? _client;
     private InfluxDbConfig? _config;
     private bool _isConfigured;
+    #endregion
 
     #region Constructor & Initialization
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InfluxDbRepository"/> class.
     /// </summary>
-    /// <param name="initializationService">The service for initialization and endpoint management.</param>
+    /// <param name="initializationService">The initialization service which must register the device and get
+    /// repository endpoint informations.</param>
     public InfluxDbRepository(CollectorInitializationService initializationService)
     {
         _initializationService = initializationService;
-        _initializationService.EndpointRenewed += HandleEndpointRenewal;
+        _initializationService.EndpointRenewed += async (s, e) => await HandleEndpointRenewalAsync(e);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Intializes the InfluxDB repository by configuring the client.
+    /// </summary>
+    /// <returns>Task.</returns>
     public async Task InitializeAsync()
     {
         await _configLock.WaitAsync();
         try
         {
             if (_isConfigured)
-            {
                 return;
-            }
 
-            // Get the initial configuration from the initialization service
             _config = _initializationService.GetInfluxConfig();
-
-            await InitializeClientAsync();
+            InitializeClient();
+            _initializationService.EndpointRenewed += async (s, e) => await HandleEndpointRenewalAsync(e);
             _isConfigured = true;
 
             Log.Information("InfluxDB repository initialized with endpoint: {Endpoint}", _config.Endpoint);
@@ -59,27 +64,52 @@ public class InfluxDbRepository : IDataRepository
         }
     }
 
-    private async Task InitializeClientAsync()
+    private void InitializeClient()
     {
-        // TODO: Implement actual InfluxDB client initialization
-        // This is a placeholder implementation that will be replaced with actual client initialization
+        if (_config == null)
+        {
+            Log.Error("InfluxDB configuration is not set. Cannot initialize client.");
+            throw new InvalidOperationException("InfluxDB configuration is not set.");
+        }
 
-        // Example:
-        // _client = new InfluxDBClient(_config.Endpoint, _config.Token);
-
-        // Simulate initialization delay
-        await Task.Delay(50);
-
+        _client = new InfluxDBClient(_config.Endpoint, _config.Token);
         Log.Information("InfluxDB client initialized with endpoint: {Endpoint}", _config.Endpoint);
     }
+
+    private async Task HandleEndpointRenewalAsync(InfluxDbConfig newConfig)
+    {
+        await _configLock.WaitAsync();
+        try
+        {
+            _config = newConfig;
+            _client?.Dispose();
+            InitializeClient();
+
+            Log.Information("InfluxDB client updated with new endpoint: {Endpoint}", _config.Endpoint);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to update InfluxDB client after endpoint renewal");
+            _isConfigured = false;
+        }
+        finally
+        {
+            _configLock.Release();
+        }
+    }
+
     #endregion
 
     #region Insertion Methods
 
-    /// <inheritdoc/>
-    public async Task<bool> BulkInsertAsync<T>(IEnumerable<MeasurementData<T>> data)
+    /// <summary>
+    /// Inserts a collection of measurement data into InfluxDB.
+    /// </summary>
+    /// <param name="data">Data to insert into the db.</param>
+    /// <param name="configuration">The collector configuration.</param>
+    /// <returns>True if success, false otherwise.</returns>
+    public async Task<bool> BulkInsertAsync(IEnumerable<IMeasurementData> data, CollectorConfiguration configuration)
     {
-        // Ensure we're initialized before attempting any operations
         if (!_isConfigured)
         {
             try
@@ -93,124 +123,89 @@ public class InfluxDbRepository : IDataRepository
             }
         }
 
+        var dataList = data.ToList();
+
         try
         {
-            Log.Debug("Inserting {Count} measurements to InfluxDB at {Endpoint}", data.Count(), _config?.Endpoint);
-            return await TryBulkInsertWithRetryAsync(data);
+            Log.Debug("Inserting {Count} measurements to InfluxDB at {Endpoint}", dataList.Count, _config!.Endpoint);
+            return await TryBulkInsertWithRetryAsync(dataList, configuration);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error inserting measurements to InfluxDB at {Endpoint}", _config?.Endpoint);
+            Log.Error(ex, "Error inserting measurements to InfluxDB at {Endpoint}", _config!.Endpoint);
             return false;
         }
     }
 
-    private async Task<bool> TryBulkInsertWithRetryAsync<T>(IEnumerable<MeasurementData<T>> data)
+    private async Task<bool> TryBulkInsertWithRetryAsync(IEnumerable<IMeasurementData> data, CollectorConfiguration configuration)
     {
         try
         {
-            // First attempt
-            return await BulkInsertInternalAsync(data);
+            return await BulkInsertInternalAsync(data, configuration);
         }
         catch (Exception ex) when (IsConnectionException(ex))
         {
-            Log.Warning(ex, "Connection issue with InfluxDB at {Endpoint}, attempting to renew endpoint", _config?.Endpoint);
-
-            // Try to renew the endpoint
-            if (await _initializationService.TryRenewEndpointAsync())
-            {
-                Log.Information("Endpoint renewed, retrying operation");
-
-                // Second attempt after renewal
-                try
-                {
-                    return await BulkInsertInternalAsync(data);
-                }
-                catch (Exception retryEx)
-                {
-                    Log.Error(retryEx, "Failed to insert data after endpoint renewal");
-                    return false;
-                }
-            }
-
-            Log.Error("Failed to renew endpoint, data insertion failed");
-            return false;
+            Log.Warning(ex, "Connection issue with InfluxDB at {Endpoint}, attempting to renew endpoint", _config!.Endpoint);
+            return await TryReconnectAndRetryAsync(data, configuration);
         }
     }
 
-    private async Task<bool> BulkInsertInternalAsync<T>(IEnumerable<MeasurementData<T>> data)
+    private async Task<bool> TryReconnectAndRetryAsync(IEnumerable<IMeasurementData> data, CollectorConfiguration configuration)
     {
-        // TODO: Implement actual InfluxDB client logic
-        // This is a placeholder implementation that will be replaced with actual InfluxDB client code
-        Log.Debug("Writing {Count} points to InfluxDB", data.Count());
-
-        foreach (MeasurementData<T> measurement in data)
+        if (await _initializationService.TryRenewEndpointAsync())
         {
-            // Convert measurement to InfluxDB point
-            object point = ConvertToInfluxPoint(measurement);
-
-            // Write point to InfluxDB
-            // await _client.WritePointAsync(point, _config.Bucket, _config.Org);
+            Log.Information("Endpoint renewed, retrying operation");
+            try
+            {
+                return await BulkInsertInternalAsync(data, configuration);
+            }
+            catch (Exception retryEx)
+            {
+                Log.Error(retryEx, "Failed to insert data after endpoint renewal");
+                return false;
+            }
         }
 
-        // Simulate write operation delay
-        await Task.Delay(10);
+        Log.Error("Failed to renew endpoint, data insertion failed");
+        return false;
+    }
 
+    private async Task<bool> BulkInsertInternalAsync(IEnumerable<IMeasurementData> data, CollectorConfiguration configuration)
+    {
+        IEnumerable<PointData> groupedPoints = data
+            .GroupBy(m => m.TimeStamp)
+            .Select(group =>
+            {
+                var fields = group.ToDictionary(
+                    m => m.SensorName,
+                    m => m.GetRawValue());
+
+                return PointData
+                    .Measurement(configuration.DeviceName)
+                    .SetTimestamp(DateTime.SpecifyKind(group.Key, DateTimeKind.Utc))
+                    .SetFields(fields);
+            });
+
+        await _client!.WritePointsAsync(groupedPoints);
         return true;
     }
+
     #endregion
 
-    #region Private Methods
+    #region Conversion & Helpers
+
     private bool IsConnectionException(Exception ex) =>
+        ex is HttpRequestException ||
+        ex is SocketException ||
+        ex is TimeoutException ||
+        ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase);
 
-        // This would check if the exception is related to connection issues
-        // For example, HttpRequestException, SocketException, etc.
-        ex is System.Net.Http.HttpRequestException ||
-               ex is System.Net.Sockets.SocketException ||
-               ex is System.TimeoutException ||
-               ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase);
-
-    private object ConvertToInfluxPoint<T>(MeasurementData<T> measurement) =>
-
-        // TODO: Implement conversion logic from MeasurementData to InfluxDB point
-        // This is a placeholder implementation that will be replaced with actual conversion logic
-
-        // Example structure for an InfluxDB data point:
-        /*
-        var point = PointData.Measurement("sensor_data")
-            .Tag("sensor", measurement.SensorName)
-            .Field("value", measurement.Value)
-            .Timestamp(measurement.TimeStamp, WritePrecision.Ns);
-        */
-
-        new();
-
-    private void HandleEndpointRenewal(object? sender, InfluxDbConfig newConfig)
+    /// <inheritdoc/>
+    public void Dispose()
     {
-        _configLock.Wait();
-        try
-        {
-            _config = newConfig;
-
-            // TODO: Dispose and reinitialize the client with the new configuration
-            // if (_client is IDisposable disposable)
-            // {
-            //     disposable.Dispose();
-            // }
-
-            // Create a new client with the updated configuration
-            // _client = new InfluxDBClient(_config.Endpoint, _config.Token);
-            Log.Information("InfluxDB client updated with new endpoint: {Endpoint}", _config.Endpoint);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Failed to update InfluxDB client after endpoint renewal");
-            _isConfigured = false; // Force reinitialization on next operation
-        }
-        finally
-        {
-            _configLock.Release();
-        }
+        _client?.Dispose();
+        _initializationService.EndpointRenewed -= async (s, e) => await HandleEndpointRenewalAsync(e);
     }
+
     #endregion
 }
