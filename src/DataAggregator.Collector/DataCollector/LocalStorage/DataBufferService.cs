@@ -13,14 +13,13 @@ namespace DataAggregator.Collector.DataCollector.LocalStorage;
 public class DataBufferService(int maxBufferSize = 10000)
 {
     private readonly Queue<IMeasurementData> _buffer = new();
-    private readonly object _bufferLock = new();
+    private readonly Lock _bufferLock = new();
 
     /// <summary>
     /// Adds a measurement to the buffer.
     /// </summary>
     /// <param name="data">The measurement data to add.</param>
-    /// <returns>True if the data was successfully added; otherwise, false.</returns>
-    public bool Add(IMeasurementData data)
+    public void Add(IMeasurementData data)
     {
         lock (_bufferLock)
         {
@@ -31,55 +30,22 @@ public class DataBufferService(int maxBufferSize = 10000)
             }
 
             _buffer.Enqueue(data);
-            return true;
         }
     }
 
     /// <summary>
     /// Adds multiple measurements to the buffer.
     /// </summary>
-    /// <typeparam name="T">The type of the measurement value.</typeparam>
     /// <param name="data">The collection of measurement data to add.</param>
-    /// <returns>The number of measurements successfully added.</returns>
-    public int AddRange<T>(IEnumerable<MeasurementData<T>> data)
+    public void AddRange(IEnumerable<IMeasurementData> data)
     {
-        int added = 0;
-        
         lock (_bufferLock)
         {
             foreach (IMeasurementData item in data)
             {
-                if (Add(item))
-                {
-                    added++;
-                }
+                Add(item);
             }
         }
-
-        return added;
-    }
-    
-    /// <summary>
-    /// Adds multiple measurements to the buffer.
-    /// </summary>
-    /// <param name="data">The collection of measurement data to add.</param>
-    /// <returns>The number of measurements successfully added.</returns>
-    public int AddRange(IEnumerable<IMeasurementData> data)
-    {
-        int added = 0;
-        
-        lock (_bufferLock)
-        {
-            foreach (IMeasurementData item in data)
-            {
-                if (Add(item))
-                {
-                    added++;
-                }
-            }
-        }
-
-        return added;
     }
 
     /// <summary>
@@ -90,7 +56,7 @@ public class DataBufferService(int maxBufferSize = 10000)
     {
         lock (_bufferLock)
         {
-            IMeasurementData[] result = _buffer.ToArray();
+            IMeasurementData[] result = [.. _buffer];
             _buffer.Clear();
             return result;
         }
