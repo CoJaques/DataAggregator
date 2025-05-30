@@ -1,3 +1,4 @@
+using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
 using DataAggregator.Collector.DataCollector.Models;
 
 namespace DataAggregator.Collector.DataCollector.DataStorage;
@@ -16,8 +17,8 @@ public interface IDataRepository
     /// <summary>
     /// Inserts multiple measurement data points asynchronously.
     /// </summary>
-    /// <typeparam name="T">The type of the measurement value.</typeparam>
     /// <param name="data">The collection of measurement data to insert.</param>
+    /// <param name="configuration">The configuration of the collector, used to define th scheme of the repo.</param>
     /// <returns>A <see cref="Task"/> that represents the asynchronous operation. The task result contains a boolean indicating whether the operation was successful.</returns>
-    public Task<bool> BulkInsertAsync<T>(IEnumerable<MeasurementData<T>> data);
+    public Task<bool> BulkInsertAsync(IEnumerable<IMeasurementData> data, CollectorConfiguration configuration);
 }
