@@ -8,7 +8,7 @@ using Serilog;
 namespace DataAggregator.Collector.DataCollector.Abstraction;
 
 /// <summary>
-/// Abstract base class for collector services.
+/// Base class for collector services.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="CollectorService"/> class.
@@ -18,7 +18,7 @@ namespace DataAggregator.Collector.DataCollector.Abstraction;
 /// <param name="initializationService">The collector initialization service.</param>
 /// <param name="dataBufferService">The data buffer service.</param>
 /// <param name="configuration">The collector configuration.</param>
-public abstract class CollectorService(
+public class CollectorService(
     IDataSourceConnector dataSourceConnector,
     IDataRepository dataRepository,
     CollectorInitializationService initializationService,
