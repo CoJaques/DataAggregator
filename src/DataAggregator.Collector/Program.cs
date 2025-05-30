@@ -1,5 +1,4 @@
 using DataAggregator.Collector.DataCollector.Abstraction;
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
 using DataAggregator.Collector.DataCollector.Connectors.CapnProto;
 using DataAggregator.Collector.DataCollector.Connectors.OpenCN;
 using DataAggregator.Collector.DataCollector.DataStorage;
@@ -162,17 +161,16 @@ finally
 
 static void SetupConfiguration(WebApplicationBuilder builder)
 {
-    // Configure collector configuration binding
-    builder.Services.Configure<CollectorConfiguration>(builder.Configuration.GetSection("Collector"));
+    string? collectorType = builder.Configuration["CollectorType"];
 
-    if (builder.Configuration["CollectorType"]?.Equals("OpenCn", StringComparison.OrdinalIgnoreCase) == true)
+    if (collectorType?.Equals("OpenCN", StringComparison.OrdinalIgnoreCase) == true)
     {
-        // Configure OpenCN collector specific settings
-        builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration);
+        // Bind specifically to OpenCnCollectorConfiguration
+        builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration.GetSection("Collector"));
     }
     else
     {
         Log.Warning("Collector type not specified or unsupported, application will close");
-        throw new InvalidOperationException("Collector type not specified or unsupported. Please check your configuration.");
+        throw new InvalidOperationException("Collector type not specified or unsupported.");
     }
 }

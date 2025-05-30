@@ -1,4 +1,3 @@
-using DataAggregator.Collector.DataCollector.Models;
 using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.DataStorage.Influx;
