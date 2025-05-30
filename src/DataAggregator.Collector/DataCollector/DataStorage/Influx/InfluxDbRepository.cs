@@ -15,7 +15,7 @@ public class InfluxDbRepository : IDataRepository
     private readonly SemaphoreSlim _configLock = new(1, 1);
 
     // This would be replaced with actual InfluxDB client in the implementation
-    private object? _client;
+    private readonly object? _client;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InfluxDbRepository"/> class.
@@ -123,10 +123,9 @@ public class InfluxDbRepository : IDataRepository
     {
         // TODO: Implement actual InfluxDB client logic
         // This is a placeholder implementation that will be replaced with actual InfluxDB client code
-
         Log.Debug("Writing {Count} points to InfluxDB", data.Count());
 
-        foreach (var measurement in data)
+        foreach (MeasurementData<T> measurement in data)
         {
             // Convert measurement to InfluxDB point
             object point = ConvertToInfluxPoint(measurement);
@@ -141,8 +140,7 @@ public class InfluxDbRepository : IDataRepository
         return true;
     }
 
-    private object ConvertToInfluxPoint<T>(MeasurementData<T> measurement)
-    {
+    private object ConvertToInfluxPoint<T>(MeasurementData<T> measurement) =>
         // TODO: Implement conversion logic from MeasurementData to InfluxDB point
         // This is a placeholder implementation that will be replaced with actual conversion logic
 
@@ -154,18 +152,15 @@ public class InfluxDbRepository : IDataRepository
             .Timestamp(measurement.TimeStamp, WritePrecision.Ns);
         */
 
-        return new object(); // Placeholder
-    }
+        new(); // Placeholder
 
-    private bool IsConnectionException(Exception ex)
-    {
+    private bool IsConnectionException(Exception ex) =>
         // This would check if the exception is related to connection issues
         // For example, HttpRequestException, SocketException, etc.
-        return ex is System.Net.Http.HttpRequestException ||
+        ex is System.Net.Http.HttpRequestException ||
                ex is System.Net.Sockets.SocketException ||
                ex is System.TimeoutException ||
                ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase);
-    }
 
     private async Task InitializeClientAsync()
     {
@@ -196,7 +191,6 @@ public class InfluxDbRepository : IDataRepository
 
             // Create a new client with the updated configuration
             // _client = new InfluxDBClient(_config.Endpoint, _config.Token);
-
             Log.Information("InfluxDB client updated with new endpoint: {Endpoint}", _config.Endpoint);
         }
         catch (Exception ex)

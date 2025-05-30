@@ -1,5 +1,4 @@
 using DataAggregator.Collector.DataCollector.Abstraction;
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
 using DataAggregator.Collector.DataCollector.Connectors.OpenCN;
 using DataAggregator.Collector.DataCollector.Models;
 using Serilog;
@@ -15,11 +14,11 @@ public class CapnProtoConnector : IDataSourceConnector
     private readonly int _port;
     private readonly int _timeoutMs;
     private readonly OpenCnCollectorConfiguration? _openCnConfig;
-    
+
     private bool _isConnected;
     private readonly Random _random = new();
-    private readonly Dictionary<string, SensorDataType> _sensorTypeMap = new();
-    
+    private readonly Dictionary<string, SensorDataType> _sensorTypeMap = [];
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CapnProtoConnector"/> class.
     /// </summary>
@@ -30,20 +29,21 @@ public class CapnProtoConnector : IDataSourceConnector
         _port = config.Port;
         _timeoutMs = config.TimeoutMs;
     }
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CapnProtoConnector"/> class with OpenCN configuration.
     /// </summary>
     /// <param name="config">The Cap'n Proto configuration.</param>
     /// <param name="openCnConfig">The OpenCN configuration for sensor mapping.</param>
-    public CapnProtoConnector(CapnProtoConfig config, OpenCnCollectorConfiguration openCnConfig) : this(config)
+    public CapnProtoConnector(CapnProtoConfig config, OpenCnCollectorConfiguration openCnConfig)
+        : this(config)
     {
         _openCnConfig = openCnConfig;
-        
+
         // Build sensor type map from OpenCN configuration
         if (_openCnConfig?.Sensors != null)
         {
-            foreach (var sensor in _openCnConfig.Sensors)
+            foreach (OpenCnSensorConfig sensor in _openCnConfig.Sensors)
             {
                 if (sensor is OpenCnSensorConfig openCnSensor)
                 {
@@ -65,17 +65,17 @@ public class CapnProtoConnector : IDataSourceConnector
             Log.Debug("Already connected to Cap'n Proto server, disconnecting first");
             await DisconnectAsync();
         }
-        
+
         Log.Information("Connecting to Cap'n Proto server at {ServerAddress}:{Port}", _serverAddress, _port);
 
         try
         {
             // TODO: Implement actual Cap'n Proto client connection
             // This is a placeholder implementation that simulates connection initialization
-            
+
             // Simulate connection delay
             await Task.Delay(_random.Next(50, 200));
-            
+
             _isConnected = true;
             Log.Information("Connected to Cap'n Proto server");
         }
@@ -102,10 +102,10 @@ public class CapnProtoConnector : IDataSourceConnector
         {
             // TODO: Implement actual Cap'n Proto data fetching
             // This is a placeholder implementation that generates random data for testing
-            
+
             // Simulate network delay
             await Task.Delay(_random.Next(10, 50));
-            
+
             // Generate sample data
             return GenerateSampleData();
         }
@@ -126,17 +126,17 @@ public class CapnProtoConnector : IDataSourceConnector
         {
             return;
         }
-        
+
         Log.Information("Disconnecting from Cap'n Proto server");
 
         try
         {
             // TODO: Implement actual Cap'n Proto client disconnection
             // This is a placeholder implementation that simulates disconnection
-            
+
             // Simulate disconnection delay
             await Task.Delay(_random.Next(10, 50));
-            
+
             _isConnected = false;
             Log.Information("Disconnected from Cap'n Proto server");
         }
@@ -146,16 +146,16 @@ public class CapnProtoConnector : IDataSourceConnector
             throw;
         }
     }
-    
+
     private IEnumerable<IMeasurementData> GenerateSampleData()
     {
-        var timestamp = DateTime.UtcNow;
+        DateTime timestamp = DateTime.UtcNow;
         var result = new List<IMeasurementData>();
-        
+
         // If we have OpenCN configuration, use it to generate data based on the configured sensors
         if (_openCnConfig?.Sensors != null && _openCnConfig.Sensors.Any())
         {
-            foreach (var sensor in _openCnConfig.Sensors)
+            foreach (OpenCnSensorConfig sensor in _openCnConfig.Sensors)
             {
                 // Generate value based on sensor's data type
                 switch (sensor.DataType)
@@ -186,7 +186,7 @@ public class CapnProtoConnector : IDataSourceConnector
             result.Add(new MeasurementData<bool>(timestamp, "PowerStatus", _random.Next(10) > 1));
             result.Add(new MeasurementData<int>(timestamp, "CycleCounter", _random.Next(1000)));
         }
-        
+
         return result;
     }
 }

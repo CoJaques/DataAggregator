@@ -88,15 +88,9 @@ public class CollectorInitializationService(
     /// </summary>
     /// <returns>The InfluxDB configuration.</returns>
     /// <exception cref="InvalidOperationException">Thrown when collector is not initialized.</exception>
-    public InfluxDbConfig GetInfluxConfig()
-    {
-        if (!_initialized || _influxConfig == null)
-        {
-            throw new InvalidOperationException("Collector not initialized. Call InitializeAsync first.");
-        }
-
-        return _influxConfig;
-    }
+    public InfluxDbConfig GetInfluxConfig() => !_initialized || _influxConfig == null
+            ? throw new InvalidOperationException("Collector not initialized. Call InitializeAsync first.")
+            : _influxConfig;
 
     /// <summary>
     /// Attempts to renew the endpoint if it's no longer valid.
