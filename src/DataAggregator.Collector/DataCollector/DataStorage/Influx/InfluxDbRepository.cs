@@ -10,12 +10,14 @@ namespace DataAggregator.Collector.DataCollector.DataStorage.Influx;
 public class InfluxDbRepository : IDataRepository
 {
     private readonly CollectorInitializationService _initializationService;
-    private InfluxDbConfig _config;
-    private bool _isConfigured;
     private readonly SemaphoreSlim _configLock = new(1, 1);
 
-    // This would be replaced with actual InfluxDB client in the implementation
     private readonly object? _client;
+
+    private InfluxDbConfig? _config;
+    private bool _isConfigured;
+
+    #region Constructor & Initialization
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InfluxDbRepository"/> class.
@@ -57,6 +59,23 @@ public class InfluxDbRepository : IDataRepository
         }
     }
 
+    private async Task InitializeClientAsync()
+    {
+        // TODO: Implement actual InfluxDB client initialization
+        // This is a placeholder implementation that will be replaced with actual client initialization
+
+        // Example:
+        // _client = new InfluxDBClient(_config.Endpoint, _config.Token);
+
+        // Simulate initialization delay
+        await Task.Delay(50);
+
+        Log.Information("InfluxDB client initialized with endpoint: {Endpoint}", _config.Endpoint);
+    }
+    #endregion
+
+    #region Insertion Methods
+
     /// <inheritdoc/>
     public async Task<bool> BulkInsertAsync<T>(IEnumerable<MeasurementData<T>> data)
     {
@@ -76,12 +95,12 @@ public class InfluxDbRepository : IDataRepository
 
         try
         {
-            Log.Debug("Inserting {Count} measurements to InfluxDB at {Endpoint}", data.Count(), _config.Endpoint);
+            Log.Debug("Inserting {Count} measurements to InfluxDB at {Endpoint}", data.Count(), _config?.Endpoint);
             return await TryBulkInsertWithRetryAsync(data);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error inserting measurements to InfluxDB at {Endpoint}", _config.Endpoint);
+            Log.Error(ex, "Error inserting measurements to InfluxDB at {Endpoint}", _config?.Endpoint);
             return false;
         }
     }
@@ -95,7 +114,7 @@ public class InfluxDbRepository : IDataRepository
         }
         catch (Exception ex) when (IsConnectionException(ex))
         {
-            Log.Warning(ex, "Connection issue with InfluxDB at {Endpoint}, attempting to renew endpoint", _config.Endpoint);
+            Log.Warning(ex, "Connection issue with InfluxDB at {Endpoint}, attempting to renew endpoint", _config?.Endpoint);
 
             // Try to renew the endpoint
             if (await _initializationService.TryRenewEndpointAsync())
@@ -139,8 +158,20 @@ public class InfluxDbRepository : IDataRepository
 
         return true;
     }
+    #endregion
+
+    #region Private Methods
+    private bool IsConnectionException(Exception ex) =>
+
+        // This would check if the exception is related to connection issues
+        // For example, HttpRequestException, SocketException, etc.
+        ex is System.Net.Http.HttpRequestException ||
+               ex is System.Net.Sockets.SocketException ||
+               ex is System.TimeoutException ||
+               ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase);
 
     private object ConvertToInfluxPoint<T>(MeasurementData<T> measurement) =>
+
         // TODO: Implement conversion logic from MeasurementData to InfluxDB point
         // This is a placeholder implementation that will be replaced with actual conversion logic
 
@@ -152,29 +183,7 @@ public class InfluxDbRepository : IDataRepository
             .Timestamp(measurement.TimeStamp, WritePrecision.Ns);
         */
 
-        new(); // Placeholder
-
-    private bool IsConnectionException(Exception ex) =>
-        // This would check if the exception is related to connection issues
-        // For example, HttpRequestException, SocketException, etc.
-        ex is System.Net.Http.HttpRequestException ||
-               ex is System.Net.Sockets.SocketException ||
-               ex is System.TimeoutException ||
-               ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase);
-
-    private async Task InitializeClientAsync()
-    {
-        // TODO: Implement actual InfluxDB client initialization
-        // This is a placeholder implementation that will be replaced with actual client initialization
-
-        // Example:
-        // _client = new InfluxDBClient(_config.Endpoint, _config.Token);
-
-        // Simulate initialization delay
-        await Task.Delay(50);
-
-        Log.Information("InfluxDB client initialized with endpoint: {Endpoint}", _config.Endpoint);
-    }
+        new();
 
     private void HandleEndpointRenewal(object? sender, InfluxDbConfig newConfig)
     {
@@ -203,4 +212,5 @@ public class InfluxDbRepository : IDataRepository
             _configLock.Release();
         }
     }
+    #endregion
 }
