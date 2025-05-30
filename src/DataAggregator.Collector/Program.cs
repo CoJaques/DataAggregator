@@ -25,7 +25,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator Collector API", Version = "v1" }));
 
 // Get collector type from configuration
-string collectorType = builder.Configuration["CollectorType"] ?? "OpenCN";
+string? collectorType = builder.Configuration["CollectorType"];
+
+if (string.IsNullOrEmpty(collectorType))
+{
+    Log.Warning("Collector type not specified please specify one.");
+    return;
+}
 
 // Setup configuration based on collector type
 SetupConfiguration(builder);
