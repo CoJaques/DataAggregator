@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
-using DataAggregator.Collector.DataCollector.DataStorage.Influx;
 using DataAggregator.Shared;
+using DataAggregator.Shared.Configuration.TimeSeries;
 using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.Registration;
@@ -23,7 +23,7 @@ public class CollectorInitializationService(
     private readonly ConcurrentDictionary<string, DateTime> _renewAttempts = new();
 
     private bool _initialized;
-    private InfluxDbConfig? _influxConfig;
+    private InfluxEndpoint? _influxConfig;
     #endregion
 
     #region Events
@@ -31,7 +31,7 @@ public class CollectorInitializationService(
     /// <summary>
     /// Event that is triggered when the endpoint is renewed.
     /// </summary>
-    public event EventHandler<InfluxDbConfig>? EndpointRenewed;
+    public event EventHandler<InfluxEndpoint>? EndpointRenewed;
     #endregion
 
     #region Public Methods
@@ -64,11 +64,7 @@ public class CollectorInitializationService(
                     $"no endpoint available");
             }
 
-            _influxConfig = new InfluxDbConfig
-            {
-                Endpoint = response.AssignedTimeSeriesEndpoint,
-                Token = response.DeviceToken,
-            };
+            _influxConfig = new InfluxEndpoint(string.Empty, response.AssignedTimeSeriesEndpoint, response.DeviceToken);
 
             _initialized = true;
 
@@ -88,7 +84,7 @@ public class CollectorInitializationService(
     /// </summary>
     /// <returns>The InfluxDB configuration.</returns>
     /// <exception cref="InvalidOperationException">Thrown when collector is not initialized.</exception>
-    public InfluxDbConfig GetInfluxConfig() => !_initialized || _influxConfig == null
+    public InfluxEndpoint GetInfluxConfig() => !_initialized || _influxConfig == null
             ? throw new InvalidOperationException("Collector not initialized. Call InitializeAsync first.")
             : _influxConfig;
 
@@ -122,7 +118,7 @@ public class CollectorInitializationService(
                 return false;
             }
 
-            var newConfig = new InfluxDbConfig(response.AssignedTimeSeriesEndpoint, response.DeviceToken);
+            var newConfig = new InfluxEndpoint(string.Empty, response.AssignedTimeSeriesEndpoint, response.DeviceToken);
 
             // Check if endpoint actually changed
             bool changed = _influxConfig == null ||
@@ -164,7 +160,7 @@ public class CollectorInitializationService(
         return await registrationService.RegisterCollectorAsync(configuration);
     }
 
-    private void OnEndpointRenewed(InfluxDbConfig config)
+    private void OnEndpointRenewed(InfluxEndpoint config)
         => EndpointRenewed?.Invoke(this, config);
     #endregion
 }

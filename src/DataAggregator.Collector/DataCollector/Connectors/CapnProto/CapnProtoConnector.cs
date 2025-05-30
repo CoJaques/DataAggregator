@@ -22,15 +22,8 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
 {
     #region Private Fields
     private readonly Random _random = new();
+    private readonly OpenCnCollectorConfiguration _openCnConfig = config;
     private bool _isConnected;
-    #endregion
-
-    #region Properties
-
-    /// <summary>
-    /// Gets the configuration settings for the OpenCn collector.
-    /// </summary>
-    public required OpenCnCollectorConfiguration OpenCnConfig { get; init; } = config;
     #endregion
 
     #region Public Methods
@@ -46,8 +39,8 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
 
         Log.Information(
             "Connecting to Cap'n Proto server at {ServerAddress}:{Port}",
-            OpenCnConfig.CapnProto.ServerAddress,
-            OpenCnConfig.CapnProto.Port);
+            _openCnConfig.CapnProto.ServerAddress,
+            _openCnConfig.CapnProto.Port);
 
         try
         {
@@ -65,8 +58,8 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
             Log.Error(
                 ex,
                 "Failed to connect to Cap'n Proto server at {ServerAddress}:{Port}",
-                OpenCnConfig.CapnProto.ServerAddress,
-                OpenCnConfig.CapnProto.Port);
+                _openCnConfig.CapnProto.ServerAddress,
+                _openCnConfig.CapnProto.Port);
 
             _isConnected = false;
             throw;
@@ -84,8 +77,8 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
 
         Log.Debug(
             "Fetching data from Cap'n Proto server at {ServerAddress}:{Port}",
-            OpenCnConfig.CapnProto.ServerAddress,
-            OpenCnConfig.CapnProto.Port);
+            _openCnConfig.CapnProto.ServerAddress,
+            _openCnConfig.CapnProto.Port);
 
         try
         {
@@ -145,9 +138,9 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
         var result = new List<IMeasurementData>();
 
         // If we have OpenCN configuration, use it to generate data based on the configured sensors
-        if (OpenCnConfig?.Sensors != null && OpenCnConfig.Sensors.Count != 0)
+        if (_openCnConfig?.Sensors != null && _openCnConfig.Sensors.Count != 0)
         {
-            foreach (OpenCnSensorConfig sensor in OpenCnConfig.Sensors)
+            foreach (OpenCnSensorConfig sensor in _openCnConfig.Sensors)
             {
                 // Generate value based on sensor's data type
                 switch (sensor.DataType)

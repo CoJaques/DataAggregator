@@ -1,7 +1,6 @@
 using DataAggregator.Registration.InfluxService.Configuration;
 using DataAggregator.Shared.Configuration.TimeSeries;
 using Microsoft.Extensions.Options;
-using Serilog;
 
 namespace DataAggregator.Registration.InfluxService.Services;
 
@@ -29,19 +28,5 @@ public class InfluxEndpointProviderService(IOptions<InfluxEndpointsConfiguration
 
     /// <inheritdoc/>
     public async Task<bool> CheckEndPointValidityAsync(InfluxEndpoint endpoint)
-    {
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {endpoint.Token}");
-
-        try
-        {
-            HttpResponseMessage response = await httpClient.GetAsync($"{endpoint.Endpoint}/health");
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Failed to check health for InfluxDB endpoint: {Endpoint}", endpoint.Endpoint);
-            return false;
-        }
-    }
+        => await endpoint.CheckEndPointValidityAsync();
 }
