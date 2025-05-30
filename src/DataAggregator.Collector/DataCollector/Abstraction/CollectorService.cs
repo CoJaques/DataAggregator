@@ -3,12 +3,9 @@ using DataAggregator.Collector.DataCollector.DataStorage;
 using DataAggregator.Collector.DataCollector.LocalStorage;
 using DataAggregator.Collector.DataCollector.Models;
 using DataAggregator.Collector.DataCollector.Registration;
-using DataAggregator.Shared.Configuration.TimeSeries;
 using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.Abstraction;
-
-// TODO CJS -> Read and clean
 
 /// <summary>
 /// Abstract base class for collector services.
@@ -54,15 +51,9 @@ public abstract class CollectorService(
 
         try
         {
-            // Initialize the collector by registering with the central service
             await initializationService.InitializeAsync();
-
-            // Initialize the data repository with the endpoint configuration
             await dataRepository.InitializeAsync();
-
-            // Connect to the data source
-            InfluxEndpoint influxConfig = initializationService.GetInfluxConfig();
-            await dataSourceConnector.ConnectAsync(influxConfig.Endpoint);
+            await dataSourceConnector.ConnectAsync();
 
             _cancellationTokenSource = new CancellationTokenSource();
             _isRunning = true;
@@ -181,30 +172,20 @@ public abstract class CollectorService(
     /// </summary>
     /// <param name="data">The data to process.</param>
     /// <returns>A boolean indicating whether the processing was successful.</returns>
-    private async Task<bool> ProcessDataAsync(IEnumerable<IMeasurementData> data)
+    protected async Task<bool> ProcessDataAsync(IEnumerable<IMeasurementData> data)
     {
         await _processingLock.WaitAsync();
         try
         {
             Log.Debug("Processing {Count} data points", data.Count());
+            bool sucess = await dataRepository.BulkInsertAsync(data, configuration);
 
-            // Group data by type for type-specific processing
-            Dictionary<Type, List<IMeasurementData>> groupedData = GroupDataByType(data);
-            bool overallSuccess = true;
-
-            // Process each type of data
-            foreach (KeyValuePair<Type, List<IMeasurementData>> group in groupedData)
-            {
-                bool success = await ProcessDataGroupAsync(group.Key, group.Value);
-                overallSuccess = overallSuccess && success;
-            }
-
-            if (overallSuccess)
+            if (sucess)
             {
                 LastDataSent = DateTime.UtcNow;
             }
 
-            return overallSuccess;
+            return sucess;
         }
         catch (Exception ex)
         {
@@ -214,104 +195,6 @@ public abstract class CollectorService(
         finally
         {
             _processingLock.Release();
-        }
-    }
-
-    /// <summary>
-    /// Groups data by their type for type-specific processing.
-    /// </summary>
-    /// <param name="data">The data to group.</param>
-    /// <returns>A dictionary of type to list of data.</returns>
-    private Dictionary<Type, List<IMeasurementData>> GroupDataByType(IEnumerable<IMeasurementData> data)
-    {
-        var result = new Dictionary<Type, List<IMeasurementData>>();
-
-        foreach (IMeasurementData item in data)
-        {
-            if (!result.TryGetValue(item.ValueType, out List<IMeasurementData>? list))
-            {
-                list = [];
-                result[item.ValueType] = list;
-            }
-
-            list.Add(item);
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Processes a group of data of the same type.
-    /// </summary>
-    /// <param name="type">The type of the data.</param>
-    /// <param name="data">The data to process.</param>
-    /// <returns>A boolean indicating whether the processing was successful.</returns>
-    private async Task<bool> ProcessDataGroupAsync(Type type, List<IMeasurementData> data)
-    {
-        if (!data.Any())
-            return true;
-
-        // Use reflection to call the generic method with the correct type
-        System.Reflection.MethodInfo? method = typeof(CollectorService).GetMethod(
-            nameof(ProcessTypedDataAsync),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-
-        System.Reflection.MethodInfo? genericMethod = method?.MakeGenericMethod(type);
-
-        if (genericMethod == null)
-        {
-            Log.Error("Failed to create generic method for type {Type}", type.Name);
-            return false;
-        }
-
-        try
-        {
-            // Invoke the generic method
-            return await (Task<bool>)genericMethod.Invoke(this, new object[] { data })!;
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Error processing data of type {Type}", type.Name);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Processes data of a specific type.
-    /// </summary>
-    /// <typeparam name="T">The type of the data value.</typeparam>
-    /// <param name="data">The data to process.</param>
-    /// <returns>A boolean indicating whether the processing was successful.</returns>
-    private async Task<bool> ProcessTypedDataAsync<T>(List<IMeasurementData> data)
-    {
-        // Convert the data to the correct generic type
-        var typedData = data.Cast<MeasurementData<T>>().ToList();
-
-        try
-        {
-            // Try to insert the data
-            bool success = await dataRepository.BulkInsertAsync(typedData, configuration);
-
-            if (!success)
-            {
-                // Buffer the data if insertion failed
-                dataBufferService.AddRange(typedData);
-                return false;
-            }
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Log.Error(
-                ex,
-                "Error inserting data of type {Type}, buffering {Count} measurements",
-                typeof(T).Name,
-                data.Count);
-
-            // Buffer the data if insertion fails
-            dataBufferService.AddRange(data);
-            return false;
         }
     }
 

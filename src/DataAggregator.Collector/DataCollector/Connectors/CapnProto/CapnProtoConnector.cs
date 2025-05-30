@@ -29,7 +29,7 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
     #region Public Methods
 
     /// <inheritdoc/>
-    public async Task ConnectAsync(string endpoint)
+    public async Task ConnectAsync()
     {
         if (_isConnected)
         {

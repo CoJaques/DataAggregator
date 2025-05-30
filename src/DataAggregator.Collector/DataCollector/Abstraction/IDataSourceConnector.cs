@@ -10,9 +10,8 @@ public interface IDataSourceConnector
     /// <summary>
     /// Connects to the data source asynchronously.
     /// </summary>
-    /// <param name="endpoint">The endpoint to connect to.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public Task ConnectAsync(string endpoint);
+    public Task ConnectAsync();
 
     /// <summary>
     /// Fetches data from the data source asynchronously.
