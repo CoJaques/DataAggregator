@@ -16,7 +16,7 @@ public class InfluxDbRepository : IDataRepository
 
     // This would be replaced with actual InfluxDB client in the implementation
     private object? _client;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="InfluxDbRepository"/> class.
     /// </summary>
@@ -26,7 +26,7 @@ public class InfluxDbRepository : IDataRepository
         _initializationService = initializationService;
         _initializationService.EndpointRenewed += HandleEndpointRenewal;
     }
-    
+
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
@@ -40,10 +40,10 @@ public class InfluxDbRepository : IDataRepository
 
             // Get the initial configuration from the initialization service
             _config = _initializationService.GetInfluxConfig();
-            
+
             await InitializeClientAsync();
             _isConfigured = true;
-            
+
             Log.Information("InfluxDB repository initialized with endpoint: {Endpoint}", _config.Endpoint);
         }
         catch (Exception ex)
@@ -85,7 +85,7 @@ public class InfluxDbRepository : IDataRepository
             return false;
         }
     }
-    
+
     private async Task<bool> TryBulkInsertWithRetryAsync<T>(IEnumerable<MeasurementData<T>> data)
     {
         try
@@ -113,39 +113,39 @@ public class InfluxDbRepository : IDataRepository
                     return false;
                 }
             }
-            
+
             Log.Error("Failed to renew endpoint, data insertion failed");
             return false;
         }
     }
-    
+
     private async Task<bool> BulkInsertInternalAsync<T>(IEnumerable<MeasurementData<T>> data)
     {
         // TODO: Implement actual InfluxDB client logic
         // This is a placeholder implementation that will be replaced with actual InfluxDB client code
-        
+
         Log.Debug("Writing {Count} points to InfluxDB", data.Count());
-        
+
         foreach (var measurement in data)
         {
             // Convert measurement to InfluxDB point
             object point = ConvertToInfluxPoint(measurement);
-            
+
             // Write point to InfluxDB
             // await _client.WritePointAsync(point, _config.Bucket, _config.Org);
         }
-        
+
         // Simulate write operation delay
         await Task.Delay(10);
-        
+
         return true;
     }
-    
+
     private object ConvertToInfluxPoint<T>(MeasurementData<T> measurement)
     {
         // TODO: Implement conversion logic from MeasurementData to InfluxDB point
         // This is a placeholder implementation that will be replaced with actual conversion logic
-        
+
         // Example structure for an InfluxDB data point:
         /*
         var point = PointData.Measurement("sensor_data")
@@ -153,50 +153,50 @@ public class InfluxDbRepository : IDataRepository
             .Field("value", measurement.Value)
             .Timestamp(measurement.TimeStamp, WritePrecision.Ns);
         */
-        
+
         return new object(); // Placeholder
     }
-    
+
     private bool IsConnectionException(Exception ex)
     {
         // This would check if the exception is related to connection issues
         // For example, HttpRequestException, SocketException, etc.
-        return ex is System.Net.Http.HttpRequestException || 
-               ex is System.Net.Sockets.SocketException || 
+        return ex is System.Net.Http.HttpRequestException ||
+               ex is System.Net.Sockets.SocketException ||
                ex is System.TimeoutException ||
                ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase);
     }
-    
+
     private async Task InitializeClientAsync()
     {
         // TODO: Implement actual InfluxDB client initialization
         // This is a placeholder implementation that will be replaced with actual client initialization
-        
+
         // Example:
         // _client = new InfluxDBClient(_config.Endpoint, _config.Token);
-        
+
         // Simulate initialization delay
         await Task.Delay(50);
-        
+
         Log.Information("InfluxDB client initialized with endpoint: {Endpoint}", _config.Endpoint);
     }
-    
+
     private void HandleEndpointRenewal(object? sender, InfluxDbConfig newConfig)
     {
         _configLock.Wait();
         try
         {
             _config = newConfig;
-            
+
             // TODO: Dispose and reinitialize the client with the new configuration
             // if (_client is IDisposable disposable)
             // {
             //     disposable.Dispose();
             // }
-            
+
             // Create a new client with the updated configuration
             // _client = new InfluxDBClient(_config.Endpoint, _config.Token);
-            
+
             Log.Information("InfluxDB client updated with new endpoint: {Endpoint}", _config.Endpoint);
         }
         catch (Exception ex)
