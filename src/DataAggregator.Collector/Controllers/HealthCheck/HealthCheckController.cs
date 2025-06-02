@@ -1,6 +1,4 @@
 using DataAggregator.Collector.DataCollector.Abstraction;
-using DataAggregator.Collector.DataCollector.DataStorage;
-using DataAggregator.Collector.DataCollector.LocalStorage;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DataAggregator.Collector.Controllers.HealthCheck;
@@ -12,14 +10,10 @@ namespace DataAggregator.Collector.Controllers.HealthCheck;
 /// Initializes a new instance of the <see cref="HealthCheckController"/> class.
 /// </remarks>
 /// <param name="collectorService">The collector service.</param>
-/// <param name="dataBufferService">The data buffer service.</param>
-/// <param name="dataRepository">The data repository.</param>
 [ApiController]
 [Route("api/[controller]")]
 public class HealthCheckController(
-    CollectorService collectorService,
-    DataBufferService dataBufferService,
-    IDataRepository dataRepository) : ControllerBase
+    CollectorService collectorService) : ControllerBase
 {
     /// <summary>
     /// Gets the health status of the collector.
@@ -36,12 +30,12 @@ public class HealthCheckController(
                 "Healthy", // Default status
                 "Collector is running normally",
                 collectorService.LastDataSent,
-                dataBufferService.GetBufferSize(),
+                collectorService.BufferSize,
                 true, // Default value
                 DateTime.UtcNow);
 
             // Determine actual health status based on various checks
-            if (dataBufferService.GetBufferSize() > 1000)
+            if (collectorService.BufferSize > 1000)
             {
                 healthStatus.Status = "Degraded";
                 healthStatus.Message = "Buffer size is high, possible connectivity issues";
@@ -56,7 +50,7 @@ public class HealthCheckController(
             }
 
             // Check if the endpoint was configured
-            if (!await dataRepository.IsConnectedAsync())
+            if (!await collectorService.IsRepositoryConnected())
             {
                 healthStatus.Status = "Unhealthy";
                 healthStatus.Message = "No valid endpoint configuration";
