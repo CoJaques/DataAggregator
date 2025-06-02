@@ -10,11 +10,11 @@ namespace DataAggregator.Collector.DataCollector.Registration;
 /// Service responsible for initializing and managing collector configurations and endpoints.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="CollectorInitializationService"/> class.
+/// Initializes a new instance of the <see cref="CollectorEndpointManager"/> class.
 /// </remarks>
 /// <param name="registrationService">The registration service used to register and get endpoints.</param>
 /// <param name="configuration">The collector configuration.</param>
-public class CollectorInitializationService(
+public class CollectorEndpointManager(
     RegistrationService registrationService,
     CollectorConfiguration configuration)
 {
@@ -41,7 +41,7 @@ public class CollectorInitializationService(
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <exception cref="InvalidOperationException">Thrown when registration fails.</exception>
-    public async Task InitializeAsync()
+    public virtual async Task InitializeAsync()
     {
         if (_initialized && _influxConfig != null)
         {
@@ -84,7 +84,7 @@ public class CollectorInitializationService(
     /// </summary>
     /// <returns>The InfluxDB configuration.</returns>
     /// <exception cref="InvalidOperationException">Thrown when collector is not initialized.</exception>
-    public InfluxEndpoint GetInfluxConfig() => !_initialized || _influxConfig == null
+    public virtual InfluxEndpoint GetInfluxConfig() => !_initialized || _influxConfig == null
             ? throw new InvalidOperationException("Collector not initialized. Call InitializeAsync first.")
             : _influxConfig;
 
@@ -92,7 +92,7 @@ public class CollectorInitializationService(
     /// Attempts to renew the endpoint if it's no longer valid.
     /// </summary>
     /// <returns>A <see cref="Task"/> with a boolean indicating if renewal was successful.</returns>
-    public async Task<bool> TryRenewEndpointAsync()
+    public virtual async Task<bool> TryRenewEndpointAsync()
     {
         // Rate limiting - don't try to renew more than once per minute
         string key = "renew";

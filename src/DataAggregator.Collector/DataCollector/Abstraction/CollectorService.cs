@@ -2,7 +2,6 @@ using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
 using DataAggregator.Collector.DataCollector.DataStorage;
 using DataAggregator.Collector.DataCollector.LocalStorage;
 using DataAggregator.Collector.DataCollector.Models;
-using DataAggregator.Collector.DataCollector.Registration;
 using Serilog;
 
 namespace DataAggregator.Collector.DataCollector.Abstraction;
@@ -15,13 +14,11 @@ namespace DataAggregator.Collector.DataCollector.Abstraction;
 /// </remarks>
 /// <param name="dataSourceConnector">The data source connector.</param>
 /// <param name="dataRepository">The data repository.</param>
-/// <param name="initializationService">The collector initialization service.</param>
 /// <param name="dataBufferService">The data buffer service.</param>
 /// <param name="configuration">The collector configuration.</param>
 public class CollectorService(
     IDataSourceConnector dataSourceConnector,
     IDataRepository dataRepository,
-    CollectorInitializationService initializationService,
     DataBufferService dataBufferService,
     CollectorConfiguration configuration)
 {
@@ -51,7 +48,6 @@ public class CollectorService(
 
         try
         {
-            await initializationService.InitializeAsync();
             await dataRepository.InitializeAsync();
             await dataSourceConnector.ConnectAsync();
 

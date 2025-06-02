@@ -15,7 +15,7 @@ namespace DataAggregator.Collector.DataCollector.DataStorage.Influx;
 public class InfluxDbRepository : IDataRepository, IDisposable
 {
     #region Private Fields
-    private readonly CollectorInitializationService _initializationService;
+    private readonly CollectorEndpointManager _collectorEndpointManager;
     private readonly SemaphoreSlim _configLock = new(1, 1);
     private InfluxDBClient? _client;
     private InfluxEndpoint? _config;
@@ -29,10 +29,10 @@ public class InfluxDbRepository : IDataRepository, IDisposable
     /// </summary>
     /// <param name="initializationService">The initialization service which must register the device and get
     /// repository endpoint informations.</param>
-    public InfluxDbRepository(CollectorInitializationService initializationService)
+    public InfluxDbRepository(CollectorEndpointManager initializationService)
     {
-        _initializationService = initializationService;
-        _initializationService.EndpointRenewed += async (s, e) => await HandleEndpointRenewalAsync(e);
+        _collectorEndpointManager = initializationService;
+        _collectorEndpointManager.EndpointRenewed += async (s, e) => await HandleEndpointRenewalAsync(e);
     }
 
     /// <summary>
@@ -47,9 +47,10 @@ public class InfluxDbRepository : IDataRepository, IDisposable
             if (_isConfigured)
                 return;
 
-            _config = _initializationService.GetInfluxConfig();
+            await _collectorEndpointManager.InitializeAsync();
+            _config = _collectorEndpointManager.GetInfluxConfig();
             InitializeClient();
-            _initializationService.EndpointRenewed += async (s, e) => await HandleEndpointRenewalAsync(e);
+            _collectorEndpointManager.EndpointRenewed += async (s, e) => await HandleEndpointRenewalAsync(e);
             _isConfigured = true;
 
             Log.Information("InfluxDB repository initialized with endpoint: {Endpoint}", _config.Endpoint);
@@ -153,7 +154,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
 
     private async Task<bool> TryReconnectAndRetryAsync(IEnumerable<IMeasurementData> data, CollectorConfiguration configuration)
     {
-        if (await _initializationService.TryRenewEndpointAsync())
+        if (await _collectorEndpointManager.TryRenewEndpointAsync())
         {
             Log.Information("Endpoint renewed, retrying operation");
             try
@@ -205,7 +206,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
     public void Dispose()
     {
         _client?.Dispose();
-        _initializationService.EndpointRenewed -= async (s, e) => await HandleEndpointRenewalAsync(e);
+        _collectorEndpointManager.EndpointRenewed -= async (s, e) => await HandleEndpointRenewalAsync(e);
     }
 
     /// <inheritdoc/>

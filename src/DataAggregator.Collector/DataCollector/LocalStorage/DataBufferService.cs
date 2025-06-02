@@ -16,10 +16,18 @@ public class DataBufferService(int maxBufferSize = 10000)
     private readonly Lock _bufferLock = new();
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DataBufferService"/> class.
+    /// </summary>
+    public DataBufferService()
+        : this(10000)
+    {
+    }
+
+    /// <summary>
     /// Adds a measurement to the buffer.
     /// </summary>
     /// <param name="data">The measurement data to add.</param>
-    public void Add(IMeasurementData data)
+    public virtual void Add(IMeasurementData data)
     {
         lock (_bufferLock)
         {
@@ -37,7 +45,7 @@ public class DataBufferService(int maxBufferSize = 10000)
     /// Adds multiple measurements to the buffer.
     /// </summary>
     /// <param name="data">The collection of measurement data to add.</param>
-    public void AddRange(IEnumerable<IMeasurementData> data)
+    public virtual void AddRange(IEnumerable<IMeasurementData> data)
     {
         lock (_bufferLock)
         {
@@ -52,7 +60,7 @@ public class DataBufferService(int maxBufferSize = 10000)
     /// Gets and removes all measurements from the buffer.
     /// </summary>
     /// <returns>The collection of measurement data from the buffer.</returns>
-    public IEnumerable<IMeasurementData> GetAndClearBuffer()
+    public virtual IEnumerable<IMeasurementData> GetAndClearBuffer()
     {
         lock (_bufferLock)
         {
@@ -66,7 +74,7 @@ public class DataBufferService(int maxBufferSize = 10000)
     /// Gets the current size of the buffer.
     /// </summary>
     /// <returns>The number of measurements in the buffer.</returns>
-    public int GetBufferSize()
+    public virtual int GetBufferSize()
     {
         lock (_bufferLock)
         {
