@@ -33,6 +33,11 @@ public class CollectorService(
     public DateTime LastDataSent { get; private set; } = DateTime.MinValue;
 
     /// <summary>
+    /// Gets the size of the data buffer used for storing measurements before sending them to the repository.
+    /// </summary>
+    public int BufferSize => dataBufferService.GetBufferSize();
+
+    /// <summary>
     /// Starts the collector service asynchronously.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -207,4 +212,11 @@ public class CollectorService(
             await ProcessDataAsync(bufferedData);
         }
     }
+
+    /// <summary>
+    /// Methods to check if the repository is connected to the data source asynchronously.
+    /// </summary>
+    /// <returns>True if connected, false otherwise.</returns>
+    public async Task<bool> IsRepositoryConnected()
+        => await dataRepository.IsConnectedAsync();
 }

@@ -71,52 +71,38 @@ builder.Services.AddSingleton<RegistrationService>(sp =>
     return new RegistrationService(httpClient, registrationEndpoint);
 });
 
+// Setup the collector initialization service
+builder.Services.AddSingleton<CollectorEndpointManager>(sp =>
+{
+    RegistrationService registrationService = sp.GetRequiredService<RegistrationService>();
+    OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+    return new CollectorEndpointManager(registrationService, config);
+});
+
+// Setup data repository with initialization service
+builder.Services.AddSingleton<IDataRepository>(sp =>
+{
+    CollectorEndpointManager initService = sp.GetRequiredService<CollectorEndpointManager>();
+    return new InfluxDbRepository(initService);
+});
+
 // Register collector-specific services based on CollectorType
-if (collectorType.Equals("OpenCN", StringComparison.OrdinalIgnoreCase))
+RegisterCollectorSpecificServices(builder, collectorType);
+
+builder.Services.AddSingleton<CollectorService>(sp =>
 {
-    // Setup the collector initialization service
-    builder.Services.AddSingleton<CollectorEndpointManager>(sp =>
-    {
-        RegistrationService registrationService = sp.GetRequiredService<RegistrationService>();
-        OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
-        return new CollectorEndpointManager(registrationService, config);
-    });
+    OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+    IDataSourceConnector dataSourceConnector = sp.GetRequiredService<IDataSourceConnector>();
+    IDataRepository dataRepository = sp.GetRequiredService<IDataRepository>();
+    CollectorEndpointManager initService = sp.GetRequiredService<CollectorEndpointManager>();
+    DataBufferService dataBufferService = sp.GetRequiredService<DataBufferService>();
 
-    // Setup data source connector
-    builder.Services.AddSingleton<IDataSourceConnector>(sp =>
-    {
-        OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
-        return new CapnProtoConnector(config);
-    });
-
-    // Setup data repository with initialization service
-    builder.Services.AddSingleton<IDataRepository>(sp =>
-    {
-        CollectorEndpointManager initService = sp.GetRequiredService<CollectorEndpointManager>();
-        return new InfluxDbRepository(initService);
-    });
-
-    // Setup OpenCN collector service
-    builder.Services.AddSingleton<CollectorService>(sp =>
-    {
-        OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
-        IDataSourceConnector dataSourceConnector = sp.GetRequiredService<IDataSourceConnector>();
-        IDataRepository dataRepository = sp.GetRequiredService<IDataRepository>();
-        CollectorEndpointManager initService = sp.GetRequiredService<CollectorEndpointManager>();
-        DataBufferService dataBufferService = sp.GetRequiredService<DataBufferService>();
-
-        return new CollectorService(
-            dataSourceConnector,
-            dataRepository,
-            dataBufferService,
-            config);
-    });
-}
-else
-{
-    Log.Fatal($"Unsupported collector type: {collectorType}");
-    throw new InvalidOperationException($"Unsupported collector type: {collectorType}");
-}
+    return new CollectorService(
+        dataSourceConnector,
+        dataRepository,
+        dataBufferService,
+        config);
+});
 
 WebApplication app = builder.Build();
 
@@ -189,15 +175,30 @@ finally
 static void SetupConfiguration(WebApplicationBuilder builder)
 {
     string? collectorType = builder.Configuration["CollectorType"];
-
-    if (collectorType?.Equals("OpenCN", StringComparison.OrdinalIgnoreCase) == true)
+    switch (collectorType?.ToUpperInvariant())
     {
-        // Bind specifically to OpenCnCollectorConfiguration
-        builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration.GetSection("Collector"));
+        case "OPENCN":
+            builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration.GetSection("Collector"));
+            break;
+        default:
+            Log.Warning("Collector type not specified or unsupported, application will close");
+            throw new InvalidOperationException("Collector type not specified or unsupported.");
     }
-    else
+}
+
+static void RegisterCollectorSpecificServices(WebApplicationBuilder builder, string collectorType)
+{
+    switch (collectorType.ToUpperInvariant())
     {
-        Log.Warning("Collector type not specified or unsupported, application will close");
-        throw new InvalidOperationException("Collector type not specified or unsupported.");
+        case "OPENCN":
+            builder.Services.AddSingleton<IDataSourceConnector>(sp =>
+            {
+                OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+                return new CapnProtoConnector(config);
+            });
+            break;
+        default:
+            Log.Fatal($"Unsupported collector type: {collectorType}");
+            throw new InvalidOperationException($"Unsupported collector type: {collectorType}");
     }
 }
