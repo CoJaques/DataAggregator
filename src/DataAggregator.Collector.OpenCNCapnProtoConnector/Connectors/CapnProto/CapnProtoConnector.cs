@@ -1,6 +1,6 @@
-using DataAggregator.Collector.DataCollector.Abstraction;
 using DataAggregator.Collector.DataCollector.Connectors.OpenCN;
-using DataAggregator.Collector.DataCollector.Models;
+using DataAggregator.Collector.Shared.Abstraction;
+using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Shared.Domain.DataType;
 using Serilog;
 

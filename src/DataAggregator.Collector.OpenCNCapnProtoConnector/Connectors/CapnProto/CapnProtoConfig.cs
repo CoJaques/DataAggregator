@@ -1,4 +1,4 @@
-namespace DataAggregator.Collector.DataCollector.Connectors.CapnProto;
+namespace DataAggregator.Collector.OpenCNCapnProtoConnector.Connectors.CapnProto;
 
 /// <summary>
 /// Configuration for Cap'n Proto connection.

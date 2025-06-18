@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\DataAggregator.Collector\DataAggregator.Collector.csproj" />
+    <ProjectReference Include="..\..\src\DataAggregator.Collector\DataAggregator.Collector.App.csproj" />
     <ProjectReference Include="..\..\src\DataAggregator.Registration\DataAggregator.Registration.csproj" />
   </ItemGroup>
 

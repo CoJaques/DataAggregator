@@ -1,6 +1,6 @@
 using DataAggregator.Shared.Domain.DataType;
 
-namespace DataAggregator.Collector.DataCollector.Abstraction.Configuration;
+namespace DataAggregator.Collector.Shared.Abstraction.Configuration;
 
 /// <summary>
 /// Configuration for an individual sensor.

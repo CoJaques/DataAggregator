@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
-using DataAggregator.Collector.DataCollector.Registration;
+using DataAggregator.Collector.Shared.Abstraction.Configuration;
+using DataAggregator.Collector.Shared.Registration;
 using DataAggregator.Shared;
 using DataAggregator.Shared.Domain.DataType;
 using Moq;

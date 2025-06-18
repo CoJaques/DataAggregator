@@ -1,7 +1,7 @@
-using DataAggregator.Collector.DataCollector.Models;
+using DataAggregator.Collector.Shared.Models;
 using Serilog;
 
-namespace DataAggregator.Collector.DataCollector.LocalStorage;
+namespace DataAggregator.Collector.Shared.LocalStorage;
 
 /// <summary>
 /// Service for buffering measurement data when the data repository is unavailable.

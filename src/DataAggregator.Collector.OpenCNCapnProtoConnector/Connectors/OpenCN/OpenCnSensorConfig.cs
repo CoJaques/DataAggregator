@@ -1,4 +1,4 @@
-﻿using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
+﻿using DataAggregator.Collector.Shared.Abstraction.Configuration;
 
 namespace DataAggregator.Collector.DataCollector.Connectors.OpenCN;
 

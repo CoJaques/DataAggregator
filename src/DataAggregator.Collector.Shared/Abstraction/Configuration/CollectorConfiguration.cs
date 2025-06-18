@@ -1,4 +1,4 @@
-namespace DataAggregator.Collector.DataCollector.Abstraction.Configuration;
+namespace DataAggregator.Collector.Shared.Abstraction.Configuration;
 
 /// <summary>
 /// Base configuration for a collector.

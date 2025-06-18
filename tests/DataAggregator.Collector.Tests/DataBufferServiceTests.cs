@@ -1,5 +1,5 @@
-using DataAggregator.Collector.DataCollector.LocalStorage;
-using DataAggregator.Collector.DataCollector.Models;
+using DataAggregator.Collector.Shared.LocalStorage;
+using DataAggregator.Collector.Shared.Models;
 
 namespace DataAggregator.Collector.Tests;
 

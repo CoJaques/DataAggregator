@@ -1,6 +1,6 @@
-using DataAggregator.Collector.DataCollector.Models;
+using DataAggregator.Collector.Shared.Models;
 
-namespace DataAggregator.Collector.DataCollector.Abstraction;
+namespace DataAggregator.Collector.Shared.Abstraction;
 
 /// <summary>
 /// Interface for connecting to and fetching data from a data source.
