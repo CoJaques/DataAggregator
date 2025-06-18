@@ -1,9 +1,10 @@
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
+using System.Net.Http.Json;
+using DataAggregator.Collector.Shared.Abstraction.Configuration;
 using DataAggregator.Shared;
 using DataAggregator.Shared.DTOs;
 using Serilog;
 
-namespace DataAggregator.Collector.DataCollector.Registration;
+namespace DataAggregator.Collector.Shared.Registration;
 
 /// <summary>
 /// Service for handling registration with the central registration service.

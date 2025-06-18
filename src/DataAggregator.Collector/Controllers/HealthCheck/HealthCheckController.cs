@@ -1,4 +1,4 @@
-using DataAggregator.Collector.DataCollector.Abstraction;
+using DataAggregator.Collector.Shared.Abstraction;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DataAggregator.Collector.Controllers.HealthCheck;

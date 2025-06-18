@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
+using DataAggregator.Collector.Shared.Abstraction.Configuration;
 using DataAggregator.Shared;
 using DataAggregator.Shared.Configuration.TimeSeries;
 using Serilog;
 
-namespace DataAggregator.Collector.DataCollector.Registration;
+namespace DataAggregator.Collector.Shared.Registration;
 
 /// <summary>
 /// Service responsible for initializing and managing collector configurations and endpoints.

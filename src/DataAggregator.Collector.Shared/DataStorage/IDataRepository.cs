@@ -1,7 +1,7 @@
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
-using DataAggregator.Collector.DataCollector.Models;
+using DataAggregator.Collector.Shared.Abstraction.Configuration;
+using DataAggregator.Collector.Shared.Models;
 
-namespace DataAggregator.Collector.DataCollector.DataStorage;
+namespace DataAggregator.Collector.Shared.DataStorage;
 
 /// <summary>
 /// Interface for data repository operations.

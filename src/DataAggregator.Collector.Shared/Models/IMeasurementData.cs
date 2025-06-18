@@ -1,4 +1,4 @@
-namespace DataAggregator.Collector.DataCollector.Models;
+namespace DataAggregator.Collector.Shared.Models;
 
 // TODO CJS -> Check if it's better to have a SensorConfig here and work with its datatype
 

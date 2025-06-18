@@ -1,13 +1,13 @@
 using System.Net.Sockets;
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
-using DataAggregator.Collector.DataCollector.Models;
-using DataAggregator.Collector.DataCollector.Registration;
+using DataAggregator.Collector.Shared.Abstraction.Configuration;
+using DataAggregator.Collector.Shared.Models;
+using DataAggregator.Collector.Shared.Registration;
 using DataAggregator.Shared.Configuration.TimeSeries;
 using InfluxDB3.Client;
 using InfluxDB3.Client.Write;
 using Serilog;
 
-namespace DataAggregator.Collector.DataCollector.DataStorage.Influx;
+namespace DataAggregator.Collector.Shared.DataStorage.Influx;
 
 /// <summary>
 /// Implementation of a data repository for InfluxDB time series database.

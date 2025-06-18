@@ -1,4 +1,4 @@
-namespace DataAggregator.Collector.DataCollector.Models;
+namespace DataAggregator.Collector.Shared.Models;
 
 /// <summary>
 /// Represents a single measurement data point from a sensor.

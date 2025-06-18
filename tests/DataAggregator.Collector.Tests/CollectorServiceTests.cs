@@ -1,9 +1,9 @@
-using DataAggregator.Collector.DataCollector.Abstraction;
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
-using DataAggregator.Collector.DataCollector.DataStorage;
-using DataAggregator.Collector.DataCollector.LocalStorage;
-using DataAggregator.Collector.DataCollector.Models;
-using DataAggregator.Collector.DataCollector.Registration;
+using DataAggregator.Collector.Shared.Abstraction;
+using DataAggregator.Collector.Shared.Abstraction.Configuration;
+using DataAggregator.Collector.Shared.DataStorage;
+using DataAggregator.Collector.Shared.LocalStorage;
+using DataAggregator.Collector.Shared.Models;
+using DataAggregator.Collector.Shared.Registration;
 using Moq;
 
 namespace DataAggregator.Collector.Tests;

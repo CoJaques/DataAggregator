@@ -1,10 +1,10 @@
-using DataAggregator.Collector.DataCollector.Abstraction.Configuration;
-using DataAggregator.Collector.DataCollector.DataStorage;
-using DataAggregator.Collector.DataCollector.LocalStorage;
-using DataAggregator.Collector.DataCollector.Models;
+using DataAggregator.Collector.Shared.Abstraction.Configuration;
+using DataAggregator.Collector.Shared.DataStorage;
+using DataAggregator.Collector.Shared.LocalStorage;
+using DataAggregator.Collector.Shared.Models;
 using Serilog;
 
-namespace DataAggregator.Collector.DataCollector.Abstraction;
+namespace DataAggregator.Collector.Shared.Abstraction;
 
 /// <summary>
 /// Base class for collector services.
