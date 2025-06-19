@@ -1,5 +1,5 @@
 using DataAggregator.Collector.DataCollector.Connectors.CapnProto;
-using DataAggregator.Collector.DataCollector.Connectors.OpenCN;
+using DataAggregator.Collector.OpenCNCapnProtoConnector.OpenCN;
 using DataAggregator.Collector.Shared.Abstraction;
 using DataAggregator.Collector.Shared.DataStorage;
 using DataAggregator.Collector.Shared.DataStorage.Influx;

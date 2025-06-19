@@ -1,8 +1,8 @@
-using DataAggregator.Collector.OpenCNCapnProtoConnector.Connectors.CapnProto;
+using DataAggregator.Collector.OpenCNCapnProtoConnector.CapnProto;
 using DataAggregator.Collector.Shared.Abstraction.Configuration;
 using DataAggregator.Shared.Domain.DataType;
 
-namespace DataAggregator.Collector.DataCollector.Connectors.OpenCN;
+namespace DataAggregator.Collector.OpenCNCapnProtoConnector.OpenCN;
 
 /// <summary>
 /// Configuration specific for OpenCN collector.

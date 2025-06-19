@@ -1,6 +1,6 @@
 ﻿using DataAggregator.Collector.Shared.Abstraction.Configuration;
 
-namespace DataAggregator.Collector.DataCollector.Connectors.OpenCN;
+namespace DataAggregator.Collector.OpenCNCapnProtoConnector.OpenCN;
 
 /// <summary>
 /// Class which defines the configuration for OpenCN sensors.
