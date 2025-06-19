@@ -1,10 +1,10 @@
-using DataAggregator.Collector.DataCollector.Connectors.OpenCN;
+using DataAggregator.Collector.OpenCNCapnProtoConnector.OpenCN;
 using DataAggregator.Collector.Shared.Abstraction;
 using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Shared.Domain.DataType;
 using Serilog;
 
-namespace DataAggregator.Collector.DataCollector.Connectors.CapnProto;
+namespace DataAggregator.Collector.OpenCNCapnProtoConnector.CapnProto;
 
 // TODO CJS -> Implement Cap'n Proto connector for actual data fetching and connection handling
 
