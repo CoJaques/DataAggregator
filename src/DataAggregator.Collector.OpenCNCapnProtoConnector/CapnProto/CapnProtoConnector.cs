@@ -1,3 +1,5 @@
+using Capnp.Rpc;
+using CapnpGen;
 using DataAggregator.Collector.OpenCNCapnProtoConnector.OpenCN;
 using DataAggregator.Collector.Shared.Abstraction;
 using DataAggregator.Collector.Shared.Models;
@@ -6,23 +8,16 @@ using Serilog;
 
 namespace DataAggregator.Collector.OpenCNCapnProtoConnector.CapnProto;
 
-// TODO CJS -> Implement Cap'n Proto connector for actual data fetching and connection handling
-
 /// <summary>
 /// Connector for Cap'n Proto data source.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="CapnProtoConnector"/> class.
-/// </remarks>
-/// <remarks>
-/// Initializes a new instance of the <see cref="CapnProtoConnector"/> class with OpenCN configuration.
-/// </remarks>
-/// <param name="config">The collector configuration.</param>
 public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSourceConnector
 {
     #region Private Fields
-    private readonly Random _random = new();
     private readonly OpenCnCollectorConfiguration _openCnConfig = config;
+    private TcpRpcClient? _rpcClient;
+    private CMCtlSampler_Proxy? _samplerProxy;
+    private string? _samplerName;
     private bool _isConnected;
     #endregion
 
@@ -44,23 +39,48 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
 
         try
         {
-            // TODO: Implement actual Cap'n Proto client connection
-            // This is a placeholder implementation that simulates connection initialization
+            _rpcClient = new TcpRpcClient(_openCnConfig.CapnProto.ServerAddress, _openCnConfig.CapnProto.Port);
+            _samplerProxy = _rpcClient.GetMain<CMCtlSampler_Proxy>();
 
-            // Simulate connection delay
-            await Task.Delay(_random.Next(50, 200));
+            // Validate threads
+            IReadOnlyList<CMCtlThreads.Thread> threads = await _samplerProxy.GetThreadList();
+            if (threads == null || threads.Count == 0)
+                throw new InvalidOperationException("No sampling threads available on server");
+
+            double targetHz = _openCnConfig.SamplingRate;
+            CMCtlThreads.Thread bestThread = threads
+                .Select(t => new { Thread = t, Freq = t.Period > 0 ? 1_000_000_000.0 / t.Period : 0 })
+                .OrderBy(x => Math.Abs(x.Freq - targetHz))
+                .First().Thread;
+            Log.Information("Selected thread {Name} at {Freq:F2} Hz", bestThread.Name, 1_000_000_000.0 / bestThread.Period);
+
+            // Validate pins
+            IReadOnlyList<CMCtlPins.Pin> pins = await _samplerProxy.GetPinList();
+            var availablePins = pins.Select(p => p.Name).ToHashSet();
+            var requestedPins = _openCnConfig.Sensors.Select(s => s.PinName).ToList();
+
+            foreach (string? pin in requestedPins)
+            {
+                if (!availablePins.Contains(pin))
+                    throw new InvalidOperationException($"Requested pin '{pin}' not available on server");
+            }
+
+            _samplerName = "monitorSampler";
+            bool started = await _samplerProxy.StartSampling(
+                requestedPins,
+                (uint)_openCnConfig.Sensors.Count,
+                bestThread.Name,
+                _samplerName);
+
+            if (!started)
+                throw new InvalidOperationException("Failed to start sampler");
 
             _isConnected = true;
-            Log.Information("Connected to Cap'n Proto server");
+            Log.Information("Connected and sampler started successfully");
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
-            Log.Error(
-                ex,
-                "Failed to connect to Cap'n Proto server at {ServerAddress}:{Port}",
-                _openCnConfig.CapnProto.ServerAddress,
-                _openCnConfig.CapnProto.Port);
-
+            Log.Error(ex, "Failed to connect and initialize sampler");
             _isConnected = false;
             throw;
         }
@@ -69,31 +89,73 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
     /// <inheritdoc/>
     public async Task<IEnumerable<IMeasurementData>> FetchDataAsync()
     {
-        if (!_isConnected)
+        if (!_isConnected || _samplerProxy == null || _samplerName == null)
         {
-            Log.Warning("Attempted to fetch data while not connected");
+            Log.Warning("Attempted to fetch data while not connected or sampler not initialized");
             return [];
         }
 
-        Log.Debug(
-            "Fetching data from Cap'n Proto server at {ServerAddress}:{Port}",
-            _openCnConfig.CapnProto.ServerAddress,
-            _openCnConfig.CapnProto.Port);
-
         try
         {
-            // TODO: Implement actual Cap'n Proto data fetching
-            // This is a placeholder implementation that generates random data for testing
+            (CMCtlSampler.SampleData data, bool success) = await _samplerProxy.GetSamplesData(_samplerName);
+            if (!success)
+            {
+                Log.Warning("GetSamplesData failed for sampler");
+                return [];
+            }
 
-            // Simulate network delay
-            await Task.Delay(_random.Next(10, 50));
+            IReadOnlyList<CMCtlSampler.SamplePoint> samples = data.Samples;
+            DateTime timestamp = DateTime.UtcNow;
+            var result = new List<IMeasurementData>();
 
-            // Generate sample data
-            return GenerateSampleData();
+            foreach (CMCtlSampler.SamplePoint sample in samples)
+            {
+                OpenCnSensorConfig? pinConfig = _openCnConfig.Sensors.FirstOrDefault(s => s.PinName == sample.PinName);
+                if (pinConfig == null)
+                    continue;
+
+                CMCtlPins.PinValue.value valueUnion = sample.Value.Value;
+                switch (pinConfig.DataType)
+                {
+                    case SensorDataType.Boolean:
+                        if (valueUnion.B == null)
+                        {
+                            Log.Warning("Received null boolean value for pin {PinName}", pinConfig.Name);
+                            break;
+                        }
+
+                        result.Add(new MeasurementData<bool>(timestamp, pinConfig.Name, (bool)valueUnion.B));
+                        break;
+                    case SensorDataType.Integer:
+                        if (valueUnion.S == null)
+                        {
+                            Log.Warning("Received null integer value for pin {PinName}", pinConfig.Name);
+                            break;
+                        }
+
+                        result.Add(new MeasurementData<int>(timestamp, pinConfig.Name, (int)valueUnion.S));
+                        break;
+                    case SensorDataType.Double:
+                    case SensorDataType.Float:
+                        if (valueUnion.F == null)
+                        {
+                            Log.Warning("Received null float/double value for pin {PinName}", pinConfig.Name);
+                            break;
+                        }
+
+                        result.Add(new MeasurementData<double>(timestamp, pinConfig.Name, (double)valueUnion.F));
+                        break;
+                    default:
+                        Log.Warning("Unsupported data type for pin {PinName}", pinConfig.Name);
+                        break;
+                }
+            }
+
+            return result;
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
-            Log.Error(ex, "Error fetching data from Cap'n Proto server");
+            Log.Error(ex, "Error fetching sampler data");
             return [];
         }
     }
@@ -105,74 +167,30 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
     public async Task DisconnectAsync()
     {
         if (!_isConnected)
-        {
             return;
-        }
 
         Log.Information("Disconnecting from Cap'n Proto server");
 
         try
         {
-            // TODO: Implement actual Cap'n Proto client disconnection
-            // This is a placeholder implementation that simulates disconnection
+            if (_samplerProxy != null && _samplerName != null)
+            {
+                bool stopped = await _samplerProxy.StopSampling(_samplerName);
+                if (!stopped)
+                {
+                    Log.Warning("Failed to stop sampler properly");
+                }
+            }
 
-            // Simulate disconnection delay
-            await Task.Delay(_random.Next(10, 50));
-
+            _rpcClient?.Dispose();
             _isConnected = false;
             Log.Information("Disconnected from Cap'n Proto server");
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             Log.Error(ex, "Error disconnecting from Cap'n Proto server");
             throw;
         }
-    }
-    #endregion
-
-    #region Private Methods
-
-    private IEnumerable<IMeasurementData> GenerateSampleData()
-    {
-        DateTime timestamp = DateTime.UtcNow;
-        var result = new List<IMeasurementData>();
-
-        // If we have OpenCN configuration, use it to generate data based on the configured sensors
-        if (_openCnConfig?.Sensors != null && _openCnConfig.Sensors.Count != 0)
-        {
-            foreach (OpenCnSensorConfig sensor in _openCnConfig.Sensors)
-            {
-                // Generate value based on sensor's data type
-                switch (sensor.DataType)
-                {
-                    case SensorDataType.Boolean:
-                        result.Add(new MeasurementData<bool>(timestamp, sensor.Name, _random.Next(10) > 1));
-                        break;
-                    case SensorDataType.Integer:
-                        result.Add(new MeasurementData<int>(timestamp, sensor.Name, _random.Next(0, 100)));
-                        break;
-                    case SensorDataType.Double:
-                        result.Add(new MeasurementData<double>(timestamp, sensor.Name, _random.NextDouble() * 100));
-                        break;
-                    case SensorDataType.String:
-                        result.Add(new MeasurementData<string>(timestamp, sensor.Name, $"Value-{_random.Next(1000)}"));
-                        break;
-                    default:
-                        // Skip unknown types
-                        break;
-                }
-            }
-        }
-        else
-        {
-            // If no sensors are configured, generate some default test data
-            result.Add(new MeasurementData<double>(timestamp, "Temperature", _random.NextDouble() * 50));
-            result.Add(new MeasurementData<double>(timestamp, "Pressure", _random.NextDouble() * 10));
-            result.Add(new MeasurementData<bool>(timestamp, "PowerStatus", _random.Next(10) > 1));
-            result.Add(new MeasurementData<int>(timestamp, "CycleCounter", _random.Next(1000)));
-        }
-
-        return result;
     }
     #endregion
 }
