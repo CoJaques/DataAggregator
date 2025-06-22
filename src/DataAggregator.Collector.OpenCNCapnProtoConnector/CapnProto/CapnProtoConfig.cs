@@ -13,7 +13,7 @@ public class CapnProtoConfig
     /// <summary>
     /// Gets or sets the server port.
     /// </summary>
-    public int Port { get; set; } = 5000;
+    public int Port { get; set; } = 7001;
 
     /// <summary>
     /// Gets or sets the connection timeout in milliseconds.

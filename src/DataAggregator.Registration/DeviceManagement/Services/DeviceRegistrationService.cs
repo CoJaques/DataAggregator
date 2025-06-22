@@ -89,7 +89,7 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IInfl
             return new DeviceRegistrationResponse(true, newEndpoint.Endpoint, newEndpoint.Token);
         }
 
-        return new DeviceRegistrationResponse(false, existingDevice.AssignedInfluxEndpoint.Endpoint, existingDevice.AssignedInfluxEndpoint.Token);
+        return new DeviceRegistrationResponse(true, existingDevice.AssignedInfluxEndpoint.Endpoint, existingDevice.AssignedInfluxEndpoint.Token);
     }
 
     private async Task<DeviceRegistrationResponse> RegisterNewDeviceAsync(DeviceRegistrationRequest request)

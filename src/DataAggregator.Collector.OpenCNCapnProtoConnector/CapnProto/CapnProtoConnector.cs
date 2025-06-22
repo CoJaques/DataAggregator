@@ -16,9 +16,13 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
     #region Private Fields
     private readonly OpenCnCollectorConfiguration _openCnConfig = config;
     private TcpRpcClient? _rpcClient;
-    private CMCtlSampler_Proxy? _samplerProxy;
+    private ICMCtlSampler? _samplerProxy;
     private string? _samplerName;
     private bool _isConnected;
+    private bool _isFirstRead = true;
+
+    // The frequency of data acquisition in nanoseconds defined by the selected thread
+    private int _dataAcquisitionFrequency;
     #endregion
 
     #region Public Methods
@@ -40,7 +44,7 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
         try
         {
             _rpcClient = new TcpRpcClient(_openCnConfig.CapnProto.ServerAddress, _openCnConfig.CapnProto.Port);
-            _samplerProxy = _rpcClient.GetMain<CMCtlSampler_Proxy>();
+            _samplerProxy = _rpcClient.GetMain<ICMCtlSampler>();
 
             // Validate threads
             IReadOnlyList<CMCtlThreads.Thread> threads = await _samplerProxy.GetThreadList();
@@ -53,6 +57,7 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
                 .OrderBy(x => Math.Abs(x.Freq - targetHz))
                 .First().Thread;
             Log.Information("Selected thread {Name} at {Freq:F2} Hz", bestThread.Name, 1_000_000_000.0 / bestThread.Period);
+            _dataAcquisitionFrequency = bestThread.Period;
 
             // Validate pins
             IReadOnlyList<CMCtlPins.Pin> pins = await _samplerProxy.GetPinList();
@@ -81,6 +86,8 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
         catch (System.Exception ex)
         {
             Log.Error(ex, "Failed to connect and initialize sampler");
+            _rpcClient?.Dispose();
+            _samplerProxy?.Dispose();
             _isConnected = false;
             throw;
         }
@@ -97,66 +104,95 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
 
         try
         {
-            (CMCtlSampler.SampleData data, bool success) = await _samplerProxy.GetSamplesData(_samplerName);
-            if (!success)
+            if (_isFirstRead)
             {
-                Log.Warning("GetSamplesData failed for sampler");
+                // Flush initial state
+                await _samplerProxy.GetSamplesData(_samplerName);
+                _isFirstRead = false;
+            }
+
+            (CMCtlSampler.SampleData data, bool success) = await _samplerProxy.GetSamplesData(_samplerName);
+            if (!success || data.Samples.Count == 0)
+            {
+                Log.Debug("No new samples received.");
                 return [];
             }
 
-            IReadOnlyList<CMCtlSampler.SamplePoint> samples = data.Samples;
-            DateTime timestamp = DateTime.UtcNow;
-            var result = new List<IMeasurementData>();
+            CheckDataIntegrity(data);
 
-            foreach (CMCtlSampler.SamplePoint sample in samples)
+            DateTime timestampNow = DateTime.UtcNow;
+            double maxSampleId = data.Samples.Max(s => s.Id);
+            var measurements = new List<IMeasurementData>();
+
+            foreach (CMCtlSampler.SamplePoint sample in data.Samples)
             {
                 OpenCnSensorConfig? pinConfig = _openCnConfig.Sensors.FirstOrDefault(s => s.PinName == sample.PinName);
                 if (pinConfig == null)
                     continue;
 
+                double nSample = maxSampleId - sample.Id;
+                DateTime sampleTimestamp = timestampNow - TimeSpan.FromMicroseconds(nSample * _dataAcquisitionFrequency / 1_000.0);
+
                 CMCtlPins.PinValue.value valueUnion = sample.Value.Value;
-                switch (pinConfig.DataType)
+                IMeasurementData? measurement = pinConfig.DataType switch
                 {
-                    case SensorDataType.Boolean:
-                        if (valueUnion.B == null)
-                        {
-                            Log.Warning("Received null boolean value for pin {PinName}", pinConfig.Name);
-                            break;
-                        }
+                    SensorDataType.Boolean when valueUnion.B.HasValue =>
+                        new MeasurementData<bool>(sampleTimestamp, pinConfig.Name, valueUnion.B.Value),
 
-                        result.Add(new MeasurementData<bool>(timestamp, pinConfig.Name, (bool)valueUnion.B));
-                        break;
-                    case SensorDataType.Integer:
-                        if (valueUnion.S == null)
-                        {
-                            Log.Warning("Received null integer value for pin {PinName}", pinConfig.Name);
-                            break;
-                        }
+                    SensorDataType.Integer when valueUnion.S.HasValue =>
+                        new MeasurementData<int>(sampleTimestamp, pinConfig.Name, valueUnion.S.Value),
 
-                        result.Add(new MeasurementData<int>(timestamp, pinConfig.Name, (int)valueUnion.S));
-                        break;
-                    case SensorDataType.Double:
-                    case SensorDataType.Float:
-                        if (valueUnion.F == null)
-                        {
-                            Log.Warning("Received null float/double value for pin {PinName}", pinConfig.Name);
-                            break;
-                        }
+                    SensorDataType.Double or SensorDataType.Float when valueUnion.F.HasValue =>
+                        new MeasurementData<double>(sampleTimestamp, pinConfig.Name, valueUnion.F.Value),
 
-                        result.Add(new MeasurementData<double>(timestamp, pinConfig.Name, (double)valueUnion.F));
-                        break;
-                    default:
-                        Log.Warning("Unsupported data type for pin {PinName}", pinConfig.Name);
-                        break;
+                    _ => null,
+                };
+
+                if (measurement != null)
+                {
+                    measurements.Add(measurement);
+                }
+                else
+                {
+                    Log.Warning("Received null or unsupported value for pin {PinName}", pinConfig.Name);
                 }
             }
 
-            return result;
+            return measurements;
         }
         catch (System.Exception ex)
         {
             Log.Error(ex, "Error fetching sampler data");
             return [];
+        }
+    }
+
+    private void CheckDataIntegrity(CMCtlSampler.SampleData data)
+    {
+        if (data.Samples.Count % _openCnConfig.Sensors.Count != 0)
+        {
+            Log.Warning(
+                "Inconsistent sample count: received {Count} samples for {SensorCount} sensors",
+                data.Samples.Count,
+                _openCnConfig.Sensors.Count);
+        }
+
+        IEnumerable<IGrouping<string, CMCtlSampler.SamplePoint>> groupedByPin = data.Samples.GroupBy(s => s.PinName);
+        foreach (IGrouping<string, CMCtlSampler.SamplePoint> group in groupedByPin)
+        {
+            double[] ids = group.Select(s => s.Id).ToArray();
+            for (int i = 1; i < ids.Length; i++)
+            {
+                if (ids[i] != ids[i - 1] + 1)
+                {
+                    Log.Warning(
+                        "Non-consecutive IDs for pin {PinName}: {PrevId} -> {CurrentId}",
+                        group.Key,
+                        ids[i - 1],
+                        ids[i]);
+                    break;
+                }
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 namespace DataAggregator.Shared.Domain.DataType;
 
 /// <summary>
-/// Enum définissant les types de valeurs supportées par les capteurs.
+/// Enum which defines the types of data that can be produced by sensors.
 /// </summary>
 public enum SensorDataType
 {
