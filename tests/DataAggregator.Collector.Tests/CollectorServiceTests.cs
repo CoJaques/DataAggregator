@@ -36,7 +36,7 @@ public class CollectorServiceTests
         _dataRepositoryMock.Setup(x => x.InitializeAsync()).Returns(Task.CompletedTask);
         _dataSourceConnectorMock.Setup(x => x.ConnectAsync()).Returns(Task.CompletedTask);
         _dataBufferServiceMock.Setup(x => x.GetAndClearBuffer()).Returns(new List<IMeasurementData>());
-        var service = CreateService();
+        CollectorService service = CreateService();
 
         // Act
         await service.StartAsync();
@@ -54,7 +54,7 @@ public class CollectorServiceTests
         _dataRepositoryMock.Setup(x => x.InitializeAsync()).Returns(Task.CompletedTask);
         _dataSourceConnectorMock.Setup(x => x.ConnectAsync()).Returns(Task.CompletedTask);
         _dataBufferServiceMock.Setup(x => x.GetAndClearBuffer()).Returns(new List<IMeasurementData>());
-        var service = CreateService();
+        CollectorService service = CreateService();
         await service.StartAsync();
 
         // Act
@@ -71,7 +71,7 @@ public class CollectorServiceTests
         // Arrange
         _dataSourceConnectorMock.Setup(x => x.DisconnectAsync()).Returns(Task.CompletedTask);
         _dataBufferServiceMock.Setup(x => x.GetAndClearBuffer()).Returns(new List<IMeasurementData>());
-        var service = CreateService();
+        CollectorService service = CreateService();
         // Simule l'état démarré
         typeof(CollectorService).GetField("_isRunning", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(service, true);
         typeof(CollectorService).GetField("_cancellationTokenSource", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(service, new CancellationTokenSource());
@@ -88,7 +88,7 @@ public class CollectorServiceTests
     public async Task StopAsync_ShouldNotDisconnect_WhenNotRunning()
     {
         // Arrange
-        var service = CreateService();
+        CollectorService service = CreateService();
 
         // Act
         await service.StopAsync();
