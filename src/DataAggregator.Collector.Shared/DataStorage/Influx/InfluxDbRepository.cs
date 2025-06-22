@@ -183,6 +183,8 @@ public class InfluxDbRepository : IDataRepository, IDisposable
 
     private async Task<bool> BulkInsertInternalAsync(IEnumerable<IMeasurementData> data, CollectorConfiguration configuration)
     {
+        if (_client is null) return false;
+
         IEnumerable<PointData> groupedPoints = data
             .GroupBy(m => m.TimeStamp)
             .Select(group =>
@@ -197,7 +199,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
                     .SetFields(fields);
             });
 
-        await _client!.WritePointsAsync(groupedPoints);
+        await _client.WritePointsAsync(groupedPoints, null, WritePrecision.Ms);
         Log.Information($"Inserted {groupedPoints.Count()} element");
         return true;
     }
