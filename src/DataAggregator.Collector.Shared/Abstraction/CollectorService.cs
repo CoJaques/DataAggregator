@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DataAggregator.Collector.Shared.Abstraction.Configuration;
 using DataAggregator.Collector.Shared.DataStorage;
 using DataAggregator.Collector.Shared.LocalStorage;
@@ -22,10 +23,19 @@ public class CollectorService(
     DataBufferService dataBufferService,
     CollectorConfiguration configuration)
 {
+    #region Private Fields
+
     private readonly SemaphoreSlim _processingLock = new(1, 1);
+    private readonly ConcurrentQueue<IMeasurementData> _dataQueue = new();
+    private readonly TimeSpan _flushInterval = TimeSpan.FromSeconds(1); // Flush every 1 second
 
     private bool _isRunning;
     private CancellationTokenSource? _cancellationTokenSource;
+
+    private DateTime _lastFlushTime = DateTime.UtcNow;
+    #endregion
+
+    #region Public Properties
 
     /// <summary>
     /// Gets the timestamp of the last data sent successfully.
@@ -35,7 +45,11 @@ public class CollectorService(
     /// <summary>
     /// Gets the size of the data buffer used for storing measurements before sending them to the repository.
     /// </summary>
-    public int BufferSize => dataBufferService.GetBufferSize();
+    public int BufferSize => dataBufferService.GetBufferSize() + _dataQueue.Count;
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// Starts the collector service asynchronously.
@@ -59,10 +73,8 @@ public class CollectorService(
             _cancellationTokenSource = new CancellationTokenSource();
             _isRunning = true;
 
-            // Process any data in the buffer first
             await ProcessBufferedDataAsync();
 
-            // Start the data collection loop
             _ = Task.Run(DataCollectionLoopAsync);
 
             Log.Information("Collector service started for device {DeviceName}", configuration.DeviceName);
@@ -95,10 +107,7 @@ public class CollectorService(
 
         try
         {
-            // Disconnect from the data source
             await dataSourceConnector.DisconnectAsync();
-
-            // Process any remaining data in the buffer
             await ProcessBufferedDataAsync();
 
             Log.Information("Collector service stopped for device {DeviceName}", configuration.DeviceName);
@@ -110,8 +119,16 @@ public class CollectorService(
     }
 
     /// <summary>
-    /// Main loop for collecting and processing data.
+    /// Methods to check if the repository is connected to the data source asynchronously.
     /// </summary>
+    /// <returns>True if connected, false otherwise.</returns>
+    public async Task<bool> IsRepositoryConnected()
+        => await dataRepository.IsConnectedAsync();
+
+    #endregion
+
+    #region Private Methods
+
     private async Task DataCollectionLoopAsync()
     {
         int consecutiveErrors = 0;
@@ -122,39 +139,29 @@ public class CollectorService(
             {
                 try
                 {
-                    // Fetch data from the source
-                    IEnumerable<IMeasurementData> data = await dataSourceConnector.FetchDataAsync();
-
-                    // Process the data
-                    if (data.Any())
+                    IEnumerable<IMeasurementData> fetchedData = await dataSourceConnector.FetchDataAsync();
+                    foreach (IMeasurementData measurement in fetchedData)
                     {
-                        bool success = await ProcessDataAsync(data);
-
-                        if (success)
-                        {
-                            consecutiveErrors = 0;
-                        }
-                        else
-                        {
-                            consecutiveErrors++;
-                        }
+                        _dataQueue.Enqueue(measurement);
                     }
 
-                    // Add a small delay before the next fetch
-                    await Task.Delay(100, _cancellationTokenSource.Token);
+                    // Check if it's time to flush
+                    if (DateTime.UtcNow - _lastFlushTime >= _flushInterval)
+                    {
+                        _ = Task.Run(ProcessQueuedDataAsync);
+                        _lastFlushTime = DateTime.UtcNow;
+                    }
+
+                    await Task.Delay(10, _cancellationTokenSource.Token); // very short delay to allow frequent fetches
                 }
                 catch (OperationCanceledException)
                 {
-                    // Expected when cancellation is requested
                     break;
                 }
                 catch (Exception ex)
                 {
                     consecutiveErrors++;
-
                     Log.Error(ex, "Error in data collection loop ({ErrorCount} consecutive errors)", consecutiveErrors);
-
-                    // Exponential backoff for consecutive errors
                     int delay = Math.Min(100 * (int)Math.Pow(2, consecutiveErrors), 30000);
                     await Task.Delay(delay, _cancellationTokenSource.Token);
                 }
@@ -162,7 +169,6 @@ public class CollectorService(
         }
         catch (OperationCanceledException)
         {
-            // Expected when cancellation is requested
             Log.Information("Data collection loop canceled");
         }
         catch (Exception ex)
@@ -172,30 +178,35 @@ public class CollectorService(
         }
     }
 
-    /// <summary>
-    /// Processes the collected data asynchronously.
-    /// </summary>
-    /// <param name="data">The data to process.</param>
-    /// <returns>A boolean indicating whether the processing was successful.</returns>
-    protected async Task<bool> ProcessDataAsync(IEnumerable<IMeasurementData> data)
+    private async Task ProcessQueuedDataAsync()
     {
+        if (_dataQueue.IsEmpty)
+            return;
+
         await _processingLock.WaitAsync();
         try
         {
-            Log.Debug("Processing {Count} data points", data.Count());
-            bool sucess = await dataRepository.BulkInsertAsync(data, configuration);
+            var batch = new List<IMeasurementData>();
 
-            if (sucess)
+            while (_dataQueue.TryDequeue(out IMeasurementData? item))
             {
-                LastDataSent = DateTime.UtcNow;
+                batch.Add(item);
             }
 
-            return sucess;
+            if (batch.Any())
+            {
+                Log.Debug("Flushing {Count} measurements to repository", batch.Count);
+                bool success = await dataRepository.BulkInsertAsync(batch, configuration);
+
+                if (success)
+                {
+                    LastDataSent = DateTime.UtcNow;
+                }
+            }
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error processing data");
-            return false;
+            Log.Error(ex, "Error processing queued data");
         }
         finally
         {
@@ -203,24 +214,14 @@ public class CollectorService(
         }
     }
 
-    /// <summary>
-    /// Processes any data stored in the buffer.
-    /// </summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task ProcessBufferedDataAsync()
     {
-        IEnumerable<IMeasurementData> bufferedData = dataBufferService.GetAndClearBuffer();
-        if (bufferedData.Any())
+        if (_dataQueue.Count > 0)
         {
-            Log.Information("Processing {Count} items from buffer", bufferedData.Count());
-            await ProcessDataAsync(bufferedData);
+            Log.Information("Processing {Count} items from buffer", _dataQueue.Count);
+            await ProcessQueuedDataAsync();
         }
     }
 
-    /// <summary>
-    /// Methods to check if the repository is connected to the data source asynchronously.
-    /// </summary>
-    /// <returns>True if connected, false otherwise.</returns>
-    public async Task<bool> IsRepositoryConnected()
-        => await dataRepository.IsConnectedAsync();
+    #endregion
 }
