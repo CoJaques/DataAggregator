@@ -60,7 +60,7 @@ builder.Services.AddSingleton<RegistrationService>(sp =>
     IHttpClientFactory httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
     HttpClient httpClient = httpClientFactory.CreateClient("RegistrationClient");
 
-    string? registrationEndpoint = builder.Configuration["RegistrationService:Endpoint"];
+    string? registrationEndpoint = builder.Configuration["Collector:RegistrationService:Endpoint"];
 
     if (string.IsNullOrEmpty(registrationEndpoint))
     {
@@ -140,6 +140,7 @@ app.Lifetime.ApplicationStarted.Register(async () =>
     catch (Exception ex)
     {
         Log.Fatal(ex, "Failed to start collector service.");
+        await app.StopAsync();
     }
 });
 
