@@ -16,10 +16,10 @@ public class RegistrationServiceTests
         DeviceName = "dev1",
         Location = "loc",
         HealthCheckEndpoint = "http://localhost/health",
-        Sensors = new List<SensorConfig>
-        {
-            new() { Name = "s1", Type = "t1", Unit = "u1", DataType = SensorDataType.Integer, Metadata = new() }
-        }
+        Sensors =
+        [
+            new() { Name = "s1", Type = "t1", Unit = "u1", DataType = SensorDataType.Integer, Metadata = [] }
+        ]
     };
 
     [Fact]
@@ -36,7 +36,7 @@ public class RegistrationServiceTests
         var httpClient = new HttpClient(handler.Object);
         var service = new RegistrationService(httpClient, "http://test/register");
 
-        var result = await service.RegisterCollectorAsync(CreateConfig());
+        DeviceRegistrationResponse result = await service.RegisterCollectorAsync(CreateConfig());
 
         Assert.True(result.IsSuccess);
         Assert.Equal("endpoint", result.AssignedTimeSeriesEndpoint);
@@ -53,7 +53,7 @@ public class RegistrationServiceTests
         var httpClient = new HttpClient(handler.Object);
         var service = new RegistrationService(httpClient, "http://test/register");
 
-        var result = await service.RegisterCollectorAsync(CreateConfig());
+        DeviceRegistrationResponse result = await service.RegisterCollectorAsync(CreateConfig());
 
         Assert.False(result.IsSuccess);
     }
@@ -71,7 +71,7 @@ public class RegistrationServiceTests
         var httpClient = new HttpClient(handler.Object);
         var service = new RegistrationService(httpClient, "http://test/register");
 
-        var result = await service.RegisterCollectorAsync(CreateConfig());
+        DeviceRegistrationResponse result = await service.RegisterCollectorAsync(CreateConfig());
 
         Assert.False(result.IsSuccess);
     }
@@ -86,7 +86,7 @@ public class RegistrationServiceTests
         var httpClient = new HttpClient(handler.Object);
         var service = new RegistrationService(httpClient, "http://test/register");
 
-        var result = await service.RegisterCollectorAsync(CreateConfig());
+        DeviceRegistrationResponse result = await service.RegisterCollectorAsync(CreateConfig());
 
         Assert.False(result.IsSuccess);
     }
