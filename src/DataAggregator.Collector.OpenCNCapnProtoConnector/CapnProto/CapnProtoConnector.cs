@@ -20,6 +20,7 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
     private string? _samplerName;
     private bool _isConnected;
     private bool _isFirstRead = true;
+    private double _lastDataIds = 0;
 
     // The frequency of data acquisition in nanoseconds defined by the selected thread
     private int _dataAcquisitionFrequency;
@@ -194,6 +195,14 @@ public class CapnProtoConnector(OpenCnCollectorConfiguration config) : IDataSour
                 }
             }
         }
+
+        if (_lastDataIds != 0 && data.Samples[0].Id != _lastDataIds + 1)
+        {
+            Log.Warning(
+                $"Datas are not consecutive, last sample ended with {_lastDataIds} and new sample begin with {data.Samples[0].Id}");
+        }
+
+        _lastDataIds = data.Samples[data.Samples.Count - 1].Id;
     }
 
     /// <inheritdoc/>
