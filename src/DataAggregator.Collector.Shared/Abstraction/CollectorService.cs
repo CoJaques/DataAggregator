@@ -134,6 +134,10 @@ public class CollectorService(
                         {
                             consecutiveErrors = 0;
                         }
+                        else
+                        {
+                            consecutiveErrors++;
+                        }
                     }
 
                     // Add a small delay before the next fetch

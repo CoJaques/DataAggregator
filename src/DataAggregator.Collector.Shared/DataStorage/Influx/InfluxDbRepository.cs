@@ -4,6 +4,7 @@ using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Collector.Shared.Registration;
 using DataAggregator.Shared.Configuration.TimeSeries;
 using InfluxDB3.Client;
+using InfluxDB3.Client.Config;
 using InfluxDB3.Client.Write;
 using Serilog;
 
@@ -74,7 +75,15 @@ public class InfluxDbRepository : IDataRepository, IDisposable
             throw new InvalidOperationException("InfluxDB configuration is not set.");
         }
 
-        _client = new InfluxDBClient(_config.Endpoint, _config.Token);
+        var clientConfig = new ClientConfig()
+        {
+            Token = _config.Token,
+            Host = _config.Endpoint,
+            Organization = "Dataggregator",
+            Database = "Dataggregator",
+        };
+
+        _client = new InfluxDBClient(clientConfig);
         Log.Information("InfluxDB client initialized with endpoint: {Endpoint}", _config.Endpoint);
     }
 
@@ -189,6 +198,7 @@ public class InfluxDbRepository : IDataRepository, IDisposable
             });
 
         await _client!.WritePointsAsync(groupedPoints);
+        Log.Information($"Inserted {groupedPoints.Count()} element");
         return true;
     }
 
