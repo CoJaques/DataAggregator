@@ -1,41 +1,112 @@
-var builder = WebApplication.CreateBuilder(args);
+using System.Net.Sockets;
+using DataAggregator.Registration.DeviceManagement.Persistence;
+using DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
+using DataAggregator.Registration.DeviceManagement.Services;
+using DataAggregator.Registration.InfluxService.Configuration;
+using DataAggregator.Registration.InfluxService.Services;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-var app = builder.Build();
+// Configure Serilog from appsettings.json
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration) // Read configuration from appsettings.json
+    .WriteTo.Console() // Write logs to the console
+    .Enrich.FromLogContext() // Add context to logs
+    .CreateLogger();
 
-// Configure the HTTP request pipeline.
+builder.Host.UseSerilog(); // Use Serilog as the logging provider
+
+// Add services to the container
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator API", Version = "v1" }));
+
+// Configure Entity Framework Core with PostgreSQL
+string? pgHost = builder.Configuration["PGHOST"];
+string? pgPort = builder.Configuration["PGPORT"];
+string? pgDb = builder.Configuration["PGDATABASE"];
+string? pgUser = builder.Configuration["PGUSER"];
+string? pgPassword = builder.Configuration["PGPASSWORD"];
+
+if (string.IsNullOrEmpty(pgHost) || string.IsNullOrEmpty(pgDb) || string.IsNullOrEmpty(pgUser) || string.IsNullOrEmpty(pgPassword))
+{
+    Log.Fatal("PostgreSQL environment variables are not properly configured.");
+    throw new InvalidOperationException("PostgreSQL environment variables are not properly configured.");
+}
+
+string connectionString = $"Host={pgHost};Port={pgPort};Database={pgDb};Username={pgUser};Password={pgPassword}";
+
+builder.Services.AddDbContext<RegistrationDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// Expose HealthCheck endpoint
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<RegistrationDbContext>();
+
+// Bind InfluxEndpoints configuration
+builder.Services.Configure<InfluxEndpointsConfiguration>(builder.Configuration.GetSection("Influx"));
+
+// Register application services
+builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
+builder.Services.AddScoped<IDeviceRegistrationService, DeviceRegistrationService>();
+builder.Services.AddScoped<IInfluxEndpointProviderService, InfluxEndpointProviderService>();
+
+WebApplication app = builder.Build();
+
+// Apply pending migrations at startup
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    RegistrationDbContext dbContext = scope.ServiceProvider.GetRequiredService<RegistrationDbContext>();
+    try
+    {
+        Log.Information("Applying database migrations...");
+        dbContext.Database.Migrate();
+        Log.Information("Database is up to date.");
+    }
+    catch (Exception ex)
+    {
+        if (ex.InnerException is SocketException)
+            Log.Fatal(ex, "Unable to connect to Database.");
+        else
+            Log.Fatal(ex, "An error occurred while applying database migrations.");
+
+        throw;
+    }
+}
+
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DataAggregator API v1");
+        c.RoutePrefix = string.Empty;
+    });
+}
+else
+{
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseAuthorization();
 
-var summaries = new[]
+app.MapControllers();
+app.MapHealthChecks("/health");
+
+try
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
+    Log.Information("Starting the application...");
+    app.Run();
+}
+catch (Exception ex)
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+    Log.Fatal(ex, "Application failed to start.");
+}
+finally
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    Log.CloseAndFlush();
 }

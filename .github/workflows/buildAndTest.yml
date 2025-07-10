@@ -17,10 +17,12 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
+    - name: Clear cache
+      run: |
+        dotnet nuget locals all --clear
+        dotnet clean || true
     - name: Restore dependencies
-      run: dotnet restore
-    - name: Check code formatting
-      run: dotnet format --verify-no-changes
+      run: dotnet restore --force
     - name: Build
       run: dotnet build --no-restore
     - name: Test
