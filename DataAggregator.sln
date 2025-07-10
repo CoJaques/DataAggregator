@@ -7,7 +7,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E1AD9667-4C4
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Shared", "src\DataAggregator.Shared\DataAggregator.Shared.csproj", "{4DA834BA-134A-4F58-B6FF-FF0820FB9FA9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Collector", "src\DataAggregator.Collector\DataAggregator.Collector.csproj", "{54E71A40-291A-4FEB-9E13-1545172AF9EE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Collector.App", "src\DataAggregator.Collector\DataAggregator.Collector.App.csproj", "{54E71A40-291A-4FEB-9E13-1545172AF9EE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Registration", "src\DataAggregator.Registration\DataAggregator.Registration.csproj", "{E593EA7B-F713-4444-AE40-FDCEF462660A}"
 EndProject
@@ -19,13 +19,27 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Registration
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Integration.Tests", "tests\DataAggregator.Integration.Tests\DataAggregator.Integration.Tests.csproj", "{12FEEB75-A03A-4389-980B-6B735C550CAC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		Directory.Build.Props = Directory.Build.Props
+		stylecop.json = stylecop.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "collector", "collector", "{95F8787D-6FE2-4173-8450-6762EA6FAE1F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "registration", "registration", "{AA521B32-6E75-46BD-ABDF-0450227A94C4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "connectors", "connectors", "{F5250AC4-9CCC-432B-8725-DAC6AE01CCF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Collector.Shared", "src\DataAggregator.Collector.Shared\DataAggregator.Collector.Shared.csproj", "{4A5708E5-B5D1-4DA4-A2E4-323D3A21B182}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Collector.OpenCNCapnProtoConnector", "src\DataAggregator.Collector.OpenCNCapnProtoConnector\DataAggregator.Collector.OpenCNCapnProtoConnector.csproj", "{2C10378E-0937-40E3-940E-F236F6E8B95B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{4DA834BA-134A-4F58-B6FF-FF0820FB9FA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -52,13 +66,32 @@ Global
 		{12FEEB75-A03A-4389-980B-6B735C550CAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12FEEB75-A03A-4389-980B-6B735C550CAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12FEEB75-A03A-4389-980B-6B735C550CAC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A5708E5-B5D1-4DA4-A2E4-323D3A21B182}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A5708E5-B5D1-4DA4-A2E4-323D3A21B182}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A5708E5-B5D1-4DA4-A2E4-323D3A21B182}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A5708E5-B5D1-4DA4-A2E4-323D3A21B182}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C10378E-0937-40E3-940E-F236F6E8B95B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C10378E-0937-40E3-940E-F236F6E8B95B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C10378E-0937-40E3-940E-F236F6E8B95B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C10378E-0937-40E3-940E-F236F6E8B95B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{4DA834BA-134A-4F58-B6FF-FF0820FB9FA9} = {E1AD9667-4C40-4CAF-8096-5FA749EBB2B1}
-		{54E71A40-291A-4FEB-9E13-1545172AF9EE} = {E1AD9667-4C40-4CAF-8096-5FA749EBB2B1}
-		{E593EA7B-F713-4444-AE40-FDCEF462660A} = {E1AD9667-4C40-4CAF-8096-5FA749EBB2B1}
+		{54E71A40-291A-4FEB-9E13-1545172AF9EE} = {95F8787D-6FE2-4173-8450-6762EA6FAE1F}
+		{E593EA7B-F713-4444-AE40-FDCEF462660A} = {AA521B32-6E75-46BD-ABDF-0450227A94C4}
 		{63D70F2C-9C7D-4397-8150-37F343949530} = {247EF7A2-1DFD-4B51-AC7D-0FD13827CAC2}
 		{FB0B4F80-5801-407F-8425-54069C93DB60} = {247EF7A2-1DFD-4B51-AC7D-0FD13827CAC2}
 		{12FEEB75-A03A-4389-980B-6B735C550CAC} = {247EF7A2-1DFD-4B51-AC7D-0FD13827CAC2}
+		{95F8787D-6FE2-4173-8450-6762EA6FAE1F} = {E1AD9667-4C40-4CAF-8096-5FA749EBB2B1}
+		{AA521B32-6E75-46BD-ABDF-0450227A94C4} = {E1AD9667-4C40-4CAF-8096-5FA749EBB2B1}
+		{F5250AC4-9CCC-432B-8725-DAC6AE01CCF0} = {95F8787D-6FE2-4173-8450-6762EA6FAE1F}
+		{4A5708E5-B5D1-4DA4-A2E4-323D3A21B182} = {95F8787D-6FE2-4173-8450-6762EA6FAE1F}
+		{2C10378E-0937-40E3-940E-F236F6E8B95B} = {F5250AC4-9CCC-432B-8725-DAC6AE01CCF0}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9C8E6DBA-9F77-4FD0-9A1D-25150F7806FF}
 	EndGlobalSection
 EndGlobal

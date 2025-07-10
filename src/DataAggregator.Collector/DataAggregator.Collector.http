@@ -4,3 +4,13 @@ GET {{DataAggregator.Collector_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+@apiBaseUrl = http://localhost:5000
+
+### Health Check
+GET {{apiBaseUrl}}/api/healthcheck
+Accept: application/json
+
+### Direct Health Endpoint
+GET {{apiBaseUrl}}/health
+Accept: application/json
