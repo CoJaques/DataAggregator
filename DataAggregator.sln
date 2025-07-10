@@ -36,10 +36,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Collector.Sh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Collector.OpenCNCapnProtoConnector", "src\DataAggregator.Collector.OpenCNCapnProtoConnector\DataAggregator.Collector.OpenCNCapnProtoConnector.csproj", "{2C10378E-0937-40E3-940E-F236F6E8B95B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Processor", "src\DataAggregator.Processor\DataAggregator.Processor.csproj", "{039EC00D-5EDF-4C48-B449-29CFB6750232}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "processor", "processor", "{330C7B17-DB90-458C-B630-99F9C1B5EA45}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{4DA834BA-134A-4F58-B6FF-FF0820FB9FA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
