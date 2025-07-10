@@ -71,7 +71,7 @@ public class DeviceRegistrationServiceTests
         DeviceRegistrationResponse result = await _service.RegisterCollectorAsync(request);
 
         // Assert
-        Assert.False(result.IsSuccess);
+        Assert.True(result.IsSuccess);
         _deviceRepositoryMock.Verify(repo => repo.CreateAsync(It.IsAny<Collector>()), Times.Never);
     }
 

@@ -35,6 +35,7 @@ public class CollectorServiceTests
         // Arrange
         _dataRepositoryMock.Setup(x => x.InitializeAsync()).Returns(Task.CompletedTask);
         _dataSourceConnectorMock.Setup(x => x.ConnectAsync()).Returns(Task.CompletedTask);
+        _dataBufferServiceMock.Setup(x => x.GetBufferSize()).Returns(10);
         _dataBufferServiceMock.Setup(x => x.GetAndClearBuffer()).Returns(new List<IMeasurementData>());
         CollectorService service = CreateService();
 
@@ -71,6 +72,7 @@ public class CollectorServiceTests
         // Arrange
         _dataSourceConnectorMock.Setup(x => x.DisconnectAsync()).Returns(Task.CompletedTask);
         _dataBufferServiceMock.Setup(x => x.GetAndClearBuffer()).Returns(new List<IMeasurementData>());
+        _dataBufferServiceMock.Setup(x => x.GetBufferSize()).Returns(10);
         CollectorService service = CreateService();
         // Simule l'état démarré
         typeof(CollectorService).GetField("_isRunning", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(service, true);
