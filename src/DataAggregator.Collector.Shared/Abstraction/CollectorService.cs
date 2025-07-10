@@ -73,7 +73,8 @@ public class CollectorService(
             _cancellationTokenSource = new CancellationTokenSource();
             _isRunning = true;
 
-            await ProcessBufferedDataAsync();
+            // Flush the buffer at startup
+            await FlushDataBufferAsync();
 
             _ = Task.Run(DataCollectionLoopAsync);
 
@@ -108,7 +109,9 @@ public class CollectorService(
         try
         {
             await dataSourceConnector.DisconnectAsync();
-            await ProcessBufferedDataAsync();
+
+            // Flush the buffer at shutdown
+            await FlushDataBufferAsync();
 
             Log.Information("Collector service stopped for device {DeviceName}", configuration.DeviceName);
         }
@@ -128,6 +131,27 @@ public class CollectorService(
     #endregion
 
     #region Private Methods
+
+    private async Task FlushDataBufferAsync()
+    {
+        if (dataBufferService.GetBufferSize() > 0)
+        {
+            Log.Information("Flushing buffered data to repository");
+            IEnumerable<IMeasurementData> bufferData = dataBufferService.GetAndClearBuffer();
+
+            bool success = await dataRepository.BulkInsertAsync(bufferData, configuration);
+
+            if (!success)
+            {
+                Log.Warning("Failed to flush buffered data. Re-adding to buffer.");
+                dataBufferService.AddRange(bufferData);
+            }
+            else
+            {
+                Log.Information("Buffered data successfully flushed to repository.");
+            }
+        }
+    }
 
     private async Task DataCollectionLoopAsync()
     {
@@ -193,14 +217,23 @@ public class CollectorService(
                 batch.Add(item);
             }
 
-            if (batch.Any())
+            if (batch.Count != 0)
             {
                 Log.Debug("Flushing {Count} measurements to repository", batch.Count);
                 bool success = await dataRepository.BulkInsertAsync(batch, configuration);
 
-                if (success)
+                if (!success)
                 {
+                    Log.Warning("Failed to flush queued data. Adding to buffer.");
+                    dataBufferService.AddRange(batch);
+                }
+                else
+                {
+                    Log.Information("Queued data successfully flushed to repository.");
                     LastDataSent = DateTime.UtcNow;
+
+                    // Attempt to flush the buffer if it's not empty
+                    await FlushDataBufferAsync();
                 }
             }
         }
@@ -211,15 +244,6 @@ public class CollectorService(
         finally
         {
             _processingLock.Release();
-        }
-    }
-
-    private async Task ProcessBufferedDataAsync()
-    {
-        if (_dataQueue.Count > 0)
-        {
-            Log.Information("Processing {Count} items from buffer", _dataQueue.Count);
-            await ProcessQueuedDataAsync();
         }
     }
 
