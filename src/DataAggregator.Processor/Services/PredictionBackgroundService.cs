@@ -17,8 +17,14 @@ public class PredictionBackgroundService(
     IOptions<PredictionServiceConfiguration> configuration,
     MachinePredictionProcessor predictionProcessor) : BackgroundService
 {
+    #region Private fields
+
     private readonly Dictionary<string, Timer> _machineTimers = [];
     private readonly Dictionary<string, bool> _machineErrors = [];
+
+    #endregion
+
+    #region Public methods
 
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -71,6 +77,10 @@ public class PredictionBackgroundService(
 
         await base.StopAsync(cancellationToken);
     }
+
+    #endregion
+
+    #region Private methods
 
     private void ValidateConfigurationAsync()
     {
@@ -193,4 +203,6 @@ public class PredictionBackgroundService(
             _machineErrors[machineConfig.MachineName] = true;
         }
     }
+
+    #endregion
 }
