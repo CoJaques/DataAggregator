@@ -5,18 +5,14 @@ namespace DataAggregator.Processor.Services.PreProcessing.ActuatorMergingCurrent
 /// </summary>
 public static class MathUtils
 {
-#pragma warning disable IDE0022 // Use expression body for method
-
     /// <summary>
     /// Calculates the mean of a collection of values.
     /// </summary>
     /// <param name="values">Collection of float values.</param>
     /// <returns>Mean value.</returns>
-#pragma warning disable IDE0060 // Remove unused parameter
     public static float Mean(IEnumerable<float> values)
     {
-        // TODO: Implement mean calculation
-        return 0.0f; // Placeholder
+        return values == null || !values.Any() ? 0.0f : values.Average();
     }
 
     /// <summary>
@@ -26,8 +22,15 @@ public static class MathUtils
     /// <returns>Standard deviation.</returns>
     public static float StandardDeviation(IEnumerable<float> values)
     {
-        // TODO: Implement standard deviation calculation
-        return 0.0f; // Placeholder
+        if (values == null || values.Count() < 2)
+        {
+            return 0.0f;
+        }
+
+        float mean = values.Average();
+        float variance = values.Select(x => (x - mean) * (x - mean)).Average();
+
+        return (float)Math.Sqrt(variance);
     }
 
     /// <summary>
@@ -38,8 +41,23 @@ public static class MathUtils
     /// <returns>Percentile value.</returns>
     public static float Percentile(IEnumerable<float> values, float percentile)
     {
-        // TODO: Implement percentile calculation
-        return 0.0f; // Placeholder
+        if (values == null || !values.Any())
+        {
+            return 0.0f;
+        }
+
+        var sorted = values.OrderBy(x => x).ToList();
+        double index = percentile / 100.0 * (sorted.Count - 1);
+        int lower = (int)Math.Floor(index);
+        int upper = (int)Math.Ceiling(index);
+
+        if (lower == upper)
+        {
+            return sorted[lower];
+        }
+
+        double weight = index - lower;
+        return (float)((sorted[lower] * (1 - weight)) + (sorted[upper] * weight));
     }
 
     /// <summary>
@@ -49,8 +67,23 @@ public static class MathUtils
     /// <returns>Skewness value.</returns>
     public static float Skewness(IEnumerable<float> values)
     {
-        // TODO: Implement skewness calculation
-        return 0.0f; // Placeholder
+        if (values == null || values.Count() < 3)
+        {
+            return 0.0f;
+        }
+
+        var valuesList = values.ToList();
+        float mean = valuesList.Average();
+        float std = StandardDeviation(valuesList);
+
+        if (std == 0)
+        {
+            return 0.0f;
+        }
+
+        double skew = valuesList.Select(x => Math.Pow((x - mean) / std, 3)).Average();
+
+        return (float)skew;
     }
 
     /// <summary>
@@ -60,8 +93,23 @@ public static class MathUtils
     /// <returns>Kurtosis value.</returns>
     public static float Kurtosis(IEnumerable<float> values)
     {
-        // TODO: Implement kurtosis calculation
-        return 0.0f; // Placeholder
+        if (values == null || values.Count() < 4)
+        {
+            return 0.0f;
+        }
+
+        var valuesList = values.ToList();
+        float mean = valuesList.Average();
+        float std = StandardDeviation(valuesList);
+
+        if (std == 0)
+        {
+            return 0.0f;
+        }
+
+        double kurt = valuesList.Select(x => Math.Pow((x - mean) / std, 4)).Average() - 3;
+
+        return (float)kurt;
     }
 
     /// <summary>
@@ -72,9 +120,28 @@ public static class MathUtils
     /// <returns>Correlation coefficient.</returns>
     public static float Correlation(IEnumerable<float> x, IEnumerable<float> y)
     {
-        // TODO: Implement correlation calculation
-        return 0.0f; // Placeholder
+        if (x == null || y == null || !x.Any() || !y.Any())
+        {
+            return 0.0f;
+        }
+
+        var xList = x.ToList();
+        var yList = y.ToList();
+
+        if (xList.Count != yList.Count || xList.Count < 2)
+        {
+            return 0.0f;
+        }
+
+        float meanX = xList.Average();
+        float meanY = yList.Average();
+
+        float numerator = xList.Zip(yList, (xi, yi) => (xi - meanX) * (yi - meanY)).Sum();
+        float denomX = xList.Select(xi => (xi - meanX) * (xi - meanX)).Sum();
+        float denomY = yList.Select(yi => (yi - meanY) * (yi - meanY)).Sum();
+
+        double denominator = Math.Sqrt(denomX * denomY);
+
+        return denominator == 0 ? 0.0f : (float)(numerator / denominator);
     }
-#pragma warning restore IDE0022 // Use expression body for method
-#pragma warning restore IDE0060 // Remove unused parameter
 }
