@@ -1,4 +1,4 @@
-using DataAggregator.Shared;
+using DataAggregator.Shared.DTOs;
 using Serilog;
 
 namespace DataAggregator.Processor.Services.Registration;
@@ -13,32 +13,32 @@ namespace DataAggregator.Processor.Services.Registration;
 public class RegistrationServiceClient(HttpClient httpClient) : IRegistrationServiceClient
 {
     /// <inheritdoc/>
-    public async Task<DeviceRegistrationResponse> GetDeviceInfoAsync(string deviceName)
+    public async Task<CollectorInfoDto?> GetCollectorInfoAsync(string deviceName)
     {
         try
         {
-            HttpResponseMessage response = await httpClient.GetAsync($"/api/DeviceRegistration/device/{deviceName}");
+            HttpResponseMessage response = await httpClient.GetAsync($"/api/DeviceRegistration/collector/{deviceName}");
 
             if (response.IsSuccessStatusCode)
             {
-                DeviceRegistrationResponse? deviceInfo = await response.Content.ReadFromJsonAsync<DeviceRegistrationResponse>();
-                if (deviceInfo != null)
+                CollectorInfoDto? collectorInfo = await response.Content.ReadFromJsonAsync<CollectorInfoDto>();
+                if (collectorInfo != null)
                 {
                     Log.Debug(
-                        "Retrieved device info for {DeviceName}: {Endpoint}",
+                        "Retrieved collector info for {DeviceName}: {Endpoint}",
                         deviceName,
-                        deviceInfo.AssignedTimeSeriesEndpoint);
+                        collectorInfo.AssignedInfluxEndpoint.Endpoint);
 
-                    return deviceInfo;
+                    return collectorInfo;
                 }
             }
 
-            Log.Warning("Failed to retrieve device info for {DeviceName}. Status: {StatusCode}", deviceName, response.StatusCode);
-            throw new InvalidOperationException($"Failed to retrieve device info for {deviceName}. Status: {response.StatusCode}");
+            Log.Warning("Failed to retrieve collector info for {DeviceName}. Status: {StatusCode}", deviceName, response.StatusCode);
+            return null;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error retrieving device info for {DeviceName}", deviceName);
+            Log.Error(ex, "Error retrieving collector info for {DeviceName}", deviceName);
             throw;
         }
     }

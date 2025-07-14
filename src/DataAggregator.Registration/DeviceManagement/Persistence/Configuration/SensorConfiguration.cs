@@ -21,6 +21,12 @@ public class SensorConfiguration : IEntityTypeConfiguration<Sensor>
         builder.Property(s => s.SensorType).HasMaxLength(50);
         builder.Property(s => s.Unit).HasMaxLength(50);
 
+        // Configure SensorDataType as enum
+        builder.Property(s => s.DataType)
+            .HasConversion<int>()
+            .HasDefaultValue(DataAggregator.Shared.Domain.DataType.SensorDataType.Float)
+            .HasSentinel(DataAggregator.Shared.Domain.DataType.SensorDataType.Undefined);
+
         // Serialize Metadata as JSON with ValueComparer
         var metadataComparer = new ValueComparer<Dictionary<string, string>>(
             (d1, d2) => d1!.SequenceEqual(d2!),

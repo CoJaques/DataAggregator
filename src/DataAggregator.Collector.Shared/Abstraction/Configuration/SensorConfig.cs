@@ -25,7 +25,7 @@ public class SensorConfig
     /// <summary>
     /// Gets or sets the type of data this sensor produces.
     /// </summary>
-    public SensorDataType DataType { get; set; }
+    public SensorDataType DataType { get; set; } = SensorDataType.Undefined;
 
     /// <summary>
     /// Gets or sets additional metadata for the sensor.

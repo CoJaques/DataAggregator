@@ -6,27 +6,32 @@ namespace DataAggregator.Shared.Domain.DataType;
 public enum SensorDataType
 {
     /// <summary>
+    /// Undefined type (used as sentinel value).
+    /// </summary>
+    Undefined = -1,
+
+    /// <summary>
     /// Boolean type.
     /// </summary>
-    Boolean,
+    Boolean = 0,
 
     /// <summary>
     /// Integer type.
     /// </summary>
-    Integer,
+    Integer = 1,
 
     /// <summary>
     /// Double-precision floating-point type.
     /// </summary>
-    Double,
+    Double = 2,
 
     /// <summary>
     /// String type.
     /// </summary>
-    String,
+    String = 3,
 
     /// <summary>
     /// Single-precision floating-point type.
     /// </summary>
-    Float,
+    Float = 4,
 }

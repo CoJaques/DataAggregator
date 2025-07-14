@@ -3,7 +3,7 @@ using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services.DataStorage;
 using DataAggregator.Processor.Services.PreProcessing;
 using DataAggregator.Processor.Services.Registration;
-using DataAggregator.Shared;
+using DataAggregator.Shared.DTOs;
 using Serilog;
 
 namespace DataAggregator.Processor.Services.Prediction;
@@ -11,34 +11,21 @@ namespace DataAggregator.Processor.Services.Prediction;
 /// <summary>
 /// Processor for machine prediction operations.
 /// </summary>
-public class MachinePredictionProcessor
+/// <remarks>
+/// Initializes a new instance of the <see cref="MachinePredictionProcessor"/> class.
+/// </remarks>
+/// <param name="influxRepository">The InfluxDB repository.</param>
+/// <param name="registrationClient">The registration service client.</param>
+/// <param name="predictionEngine">The ONNX prediction engine.</param>
+/// <param name="strategyFactory">The preprocessing strategy factory.</param>
+public class MachinePredictionProcessor(
+    IInfluxV3Repository influxRepository,
+    IRegistrationServiceClient registrationClient,
+    IOnnxPredictionEngine predictionEngine,
+    IPreprocessingStrategyFactory strategyFactory)
 {
-    private readonly IInfluxV3Repository _influxRepository;
-    private readonly IRegistrationServiceClient _registrationClient;
-    private readonly IOnnxPredictionEngine _predictionEngine;
-    private readonly IPreprocessingStrategyFactory _strategyFactory;
-
     // Track the last endpoint used to avoid unnecessary reinitializations
     private string? _lastEndpoint;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MachinePredictionProcessor"/> class.
-    /// </summary>
-    /// <param name="influxRepository">The InfluxDB repository.</param>
-    /// <param name="registrationClient">The registration service client.</param>
-    /// <param name="predictionEngine">The ONNX prediction engine.</param>
-    /// <param name="strategyFactory">The preprocessing strategy factory.</param>
-    public MachinePredictionProcessor(
-        IInfluxV3Repository influxRepository,
-        IRegistrationServiceClient registrationClient,
-        IOnnxPredictionEngine predictionEngine,
-        IPreprocessingStrategyFactory strategyFactory)
-    {
-        _influxRepository = influxRepository;
-        _registrationClient = registrationClient;
-        _predictionEngine = predictionEngine;
-        _strategyFactory = strategyFactory;
-    }
 
     /// <summary>
     /// Processes prediction for a specific machine.
@@ -51,23 +38,53 @@ public class MachinePredictionProcessor
         {
             Log.Debug("Starting prediction process for machine {MachineName}", config.MachineName);
 
-            // Get device info from registration service
-            DeviceRegistrationResponse deviceInfo = await _registrationClient.GetDeviceInfoAsync(config.MachineName);
+            // Get collector info from registration service
+            CollectorInfoDto? collectorInfo = await registrationClient.GetCollectorInfoAsync(config.MachineName);
+
+            if (collectorInfo == null)
+            {
+                Log.Warning("Collector info not found for machine {MachineName}", config.MachineName);
+                return;
+            }
+
+            // Validate that all required sensors are available
+            var availableSensors = collectorInfo.Sensors.ToDictionary(s => s.SensorName, s => s);
+            var requestedSensors = config.InputSensors.Where(s => availableSensors.ContainsKey(s)).ToList();
+
+            if (requestedSensors.Count != config.InputSensors.Count)
+            {
+                IEnumerable<string> missingSensors = config.InputSensors.Except(requestedSensors);
+                Log.Warning(
+                    "Missing sensors for machine {MachineName}: {MissingSensors}",
+                    config.MachineName,
+                    string.Join(", ", missingSensors));
+
+                if (requestedSensors.Count == 0)
+                {
+                    Log.Error("No valid sensors found for machine {MachineName}", config.MachineName);
+                    return;
+                }
+            }
 
             // Initialize InfluxDB repository only if endpoint changed
-            if (_lastEndpoint != deviceInfo.AssignedTimeSeriesEndpoint)
+            if (_lastEndpoint != collectorInfo.AssignedInfluxEndpoint.Endpoint)
             {
-                _influxRepository.InitializeAsync(
-                    deviceInfo.AssignedTimeSeriesEndpoint,
-                    deviceInfo.DeviceToken,
+                influxRepository.InitializeAsync(
+                    collectorInfo.AssignedInfluxEndpoint.Endpoint,
+                    collectorInfo.AssignedInfluxEndpoint.Token,
                     "Dataggregator");
 
-                _lastEndpoint = deviceInfo.AssignedTimeSeriesEndpoint;
+                _lastEndpoint = collectorInfo.AssignedInfluxEndpoint.Endpoint;
                 Log.Debug("Reinitialized InfluxDB connection with new endpoint: {Endpoint}", _lastEndpoint);
             }
 
-            // Fetch data window
-            List<IMeasurementData> measurements = await FetchDataWindowAsync(config);
+            // Get sensor info for requested sensors
+            var requestedSensorInfos = requestedSensors
+                .Select(sensorName => availableSensors[sensorName])
+                .ToList();
+
+            // Fetch data window with sensor type information
+            List<IMeasurementData> measurements = await FetchDataWindowAsync(config, requestedSensorInfos);
 
             if (measurements.Count == 0)
             {
@@ -85,13 +102,13 @@ public class MachinePredictionProcessor
             }
 
             // Perform prediction
-            float[] predictions = await _predictionEngine.PredictAsync(config.ModelPath, preprocessedData);
+            float[] predictions = await predictionEngine.PredictAsync(config.ModelPath, preprocessedData);
 
             // Create prediction measurement
             IMeasurementData predictionMeasurement = CreatePredictionMeasurementAsync(predictions, config);
 
             // Write prediction to InfluxDB
-            await _influxRepository.WriteMeasurementAsync(config.MachineName, predictionMeasurement);
+            await influxRepository.WriteMeasurementAsync(config.MachineName, predictionMeasurement);
 
             Log.Information(
                 "Prediction completed for machine {MachineName}: {PredictionValue}",
@@ -109,17 +126,18 @@ public class MachinePredictionProcessor
     /// Fetches data window for prediction.
     /// </summary>
     /// <param name="config">The machine prediction configuration.</param>
+    /// <param name="sensors">The list of available sensors with type information.</param>
     /// <returns>A list of measurement data.</returns>
-    private async Task<List<IMeasurementData>> FetchDataWindowAsync(MachinePredictionConfig config)
+    private async Task<List<IMeasurementData>> FetchDataWindowAsync(MachinePredictionConfig config, List<SensorInfoDto> sensors)
     {
         DateTime endTime = DateTime.UtcNow;
-        DateTime startTime = endTime.AddSeconds(config.WindowSizeSeconds);
+        DateTime startTime = endTime.AddSeconds(-config.WindowSizeSeconds);
 
-        return await _influxRepository.QueryMeasurementsAsync(
+        return await influxRepository.QueryMeasurementsAsync(
             config.MachineName,
             startTime,
             endTime,
-            config.InputSensors);
+            sensors);
     }
 
     /// <summary>
@@ -138,7 +156,7 @@ public class MachinePredictionProcessor
                 return Array.Empty<float>();
             }
 
-            IPreprocessingStrategy strategy = _strategyFactory.CreateStrategy(config.PreprocessingStrategy);
+            IPreprocessingStrategy strategy = strategyFactory.CreateStrategy(config.PreprocessingStrategy);
             float[] preprocessedData = await strategy.PreprocessAsync(measurements, config);
 
             Log.Debug(

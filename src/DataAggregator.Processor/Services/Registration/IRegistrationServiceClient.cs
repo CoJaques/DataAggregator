@@ -1,4 +1,4 @@
-using DataAggregator.Shared;
+using DataAggregator.Shared.DTOs;
 
 namespace DataAggregator.Processor.Services.Registration;
 
@@ -8,9 +8,9 @@ namespace DataAggregator.Processor.Services.Registration;
 public interface IRegistrationServiceClient
 {
     /// <summary>
-    /// Gets device information from the registration service.
+    /// Gets collector information from the registration service.
     /// </summary>
     /// <param name="deviceName">The name of the device.</param>
-    /// <returns>The device registration response.</returns>
-    public Task<DeviceRegistrationResponse> GetDeviceInfoAsync(string deviceName);
+    /// <returns>The collector information.</returns>
+    public Task<CollectorInfoDto?> GetCollectorInfoAsync(string deviceName);
 }
