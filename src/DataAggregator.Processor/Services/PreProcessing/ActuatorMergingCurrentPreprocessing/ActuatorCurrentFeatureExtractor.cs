@@ -33,13 +33,6 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         return normalizedFeatures;
     }
 
-    /// <summary>
-    /// Extracts the 14 agnostic features from measurements for specified sensors.
-    /// Based on the ML.NET notebook implementation.
-    /// </summary>
-    /// <param name="measurements">List of measurements.</param>
-    /// <param name="sensors">List of sensor names to extract features from.</param>
-    /// <returns>Array of 14 extracted features.</returns>
     private float[] ExtractFeatures(List<IMeasurementData> measurements, List<string> sensors)
     {
         if (measurements == null || sensors == null || sensors.Count == 0)
@@ -84,7 +77,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
             return new float[14];
         }
 
-        // Calculate global statistics (like in the notebook)
+        // Calculate global statistics
         float globalStd = MathUtils.StandardDeviation(allCurrents);
         float globalMean = MathUtils.Mean(allCurrents);
         float globalMedian = MathUtils.Percentile(allCurrents, 50);
@@ -154,12 +147,6 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         };
     }
 
-    /// <summary>
-    /// Extracts current values for each axis from measurements.
-    /// </summary>
-    /// <param name="measurements">List of measurements.</param>
-    /// <param name="sensors">List of sensor names.</param>
-    /// <returns>List of current values for each axis.</returns>
     private List<List<float>> ExtractAxisCurrents(List<IMeasurementData> measurements, List<string> sensors)
     {
         var axisCurrents = new List<List<float>>();
@@ -199,11 +186,6 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         return axisCurrents;
     }
 
-    /// <summary>
-    /// Calculates correlations between all pairs of axes.
-    /// </summary>
-    /// <param name="axisCurrents">List of current values for each axis.</param>
-    /// <returns>List of correlation coefficients.</returns>
     private List<float> CalculateInterAxisCorrelations(List<List<float>> axisCurrents)
     {
         var correlations = new List<float>();
@@ -223,11 +205,6 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         return correlations;
     }
 
-    /// <summary>
-    /// Calculates temporal stability by analyzing variance across time segments.
-    /// </summary>
-    /// <param name="allCurrents">All current values.</param>
-    /// <returns>Temporal stability value.</returns>
     private float CalculateTemporalStability(List<float> allCurrents)
     {
         int segmentSize = allCurrents.Count / 4;
@@ -254,11 +231,6 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
             : 1f;
     }
 
-    /// <summary>
-    /// Calculates the trend slope using linear regression.
-    /// </summary>
-    /// <param name="allCurrents">All current values.</param>
-    /// <returns>Trend slope value.</returns>
     private float CalculateTrendSlope(List<float> allCurrents)
     {
         if (allCurrents.Count < 2)
@@ -276,12 +248,6 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         return denominator != 0 ? numerator / denominator : 0f;
     }
 
-    /// <summary>
-    /// Applies Z-score normalization to features using configuration parameters.
-    /// </summary>
-    /// <param name="features">Raw features array.</param>
-    /// <param name="preprocessing">Preprocessing configuration.</param>
-    /// <returns>Normalized features array.</returns>
     private float[] NormalizeFeaturesAsync(float[] features, PreprocessingConfig preprocessing)
     {
         if (!preprocessing.EnableZScoreNormalization)

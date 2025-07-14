@@ -47,11 +47,6 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
         }
     }
 
-    /// <summary>
-    /// Loads or gets a cached ONNX model.
-    /// </summary>
-    /// <param name="modelPath">The path to the ONNX model file.</param>
-    /// <returns>The inference session.</returns>
     private InferenceSession LoadOrGetModel(string modelPath)
     {
         if (_modelCache.TryGetValue(modelPath, out InferenceSession? cachedSession))
