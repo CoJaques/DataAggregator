@@ -44,4 +44,9 @@ public class MachinePredictionConfig
     /// Gets or sets the cycle interval in seconds for this machine.
     /// </summary>
     public int CycleIntervalSeconds { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the preprocessing configuration for Z-score normalization.
+    /// </summary>
+    public PreprocessingConfig Preprocessing { get; set; } = new();
 }
