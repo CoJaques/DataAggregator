@@ -24,8 +24,14 @@ public class MachinePredictionProcessor(
     IOnnxPredictionEngine predictionEngine,
     IPreprocessingStrategyFactory strategyFactory)
 {
+    #region Private fields
+
     // Track the last endpoint used to avoid unnecessary reinitializations
     private string? _lastEndpoint;
+
+    #endregion
+
+    #region Public methods
 
     /// <summary>
     /// Processes prediction for a specific machine.
@@ -122,6 +128,10 @@ public class MachinePredictionProcessor(
         }
     }
 
+    #endregion
+
+    #region Private methods
+
     private async Task<List<IMeasurementData>> FetchDataWindowAsync(MachinePredictionConfig config, List<SensorInfoDto> sensors)
     {
         DateTime endTime = DateTime.UtcNow;
@@ -173,4 +183,6 @@ public class MachinePredictionProcessor(
             config.PredictionSensorName,
             predictionValue);
     }
+
+    #endregion
 }

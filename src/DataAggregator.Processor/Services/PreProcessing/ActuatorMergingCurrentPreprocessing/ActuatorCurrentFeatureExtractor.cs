@@ -10,6 +10,8 @@ namespace DataAggregator.Processor.Services.PreProcessing.ActuatorMergingCurrent
 /// </summary>
 public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
 {
+    #region Public methods
+
     /// <summary>
     /// Preprocesses actuator current measurements into a feature vector.
     /// </summary>
@@ -32,6 +34,10 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         Log.Debug("Preprocessing completed for machine {MachineName}", config.MachineName);
         return normalizedFeatures;
     }
+
+    #endregion
+
+    #region Private methods
 
     private float[] ExtractFeatures(List<IMeasurementData> measurements, List<string> sensors)
     {
@@ -282,4 +288,6 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
 
         return normalized;
     }
+
+    #endregion
 }

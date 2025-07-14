@@ -9,7 +9,13 @@ namespace DataAggregator.Processor.Services.Prediction;
 /// </summary>
 public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
 {
+    #region Private fields
+
     private readonly Dictionary<string, InferenceSession> _modelCache = [];
+
+    #endregion
+
+    #region Public methods
 
     /// <inheritdoc/>
     public async Task<float[]> PredictAsync(string modelPath, float[] inputData)
@@ -47,6 +53,23 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
         }
     }
 
+    /// <summary>
+    /// Disposes the cached models.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (InferenceSession session in _modelCache.Values)
+        {
+            session?.Dispose();
+        }
+
+        _modelCache.Clear();
+    }
+
+    #endregion
+
+    #region Private methods
+
     private InferenceSession LoadOrGetModel(string modelPath)
     {
         if (_modelCache.TryGetValue(modelPath, out InferenceSession? cachedSession))
@@ -75,16 +98,5 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
         }
     }
 
-    /// <summary>
-    /// Disposes the cached models.
-    /// </summary>
-    public void Dispose()
-    {
-        foreach (InferenceSession session in _modelCache.Values)
-        {
-            session?.Dispose();
-        }
-
-        _modelCache.Clear();
-    }
+    #endregion
 }
