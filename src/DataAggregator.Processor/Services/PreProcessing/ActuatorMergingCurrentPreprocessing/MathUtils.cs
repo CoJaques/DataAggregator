@@ -11,9 +11,7 @@ public static class MathUtils
     /// <param name="values">Collection of float values.</param>
     /// <returns>Mean value.</returns>
     public static float Mean(IEnumerable<float> values)
-    {
-        return values == null || !values.Any() ? 0.0f : values.Average();
-    }
+        => values == null || !values.Any() ? 0.0f : values.Average();
 
     /// <summary>
     /// Calculates the standard deviation of a collection of values.
