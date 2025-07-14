@@ -16,7 +16,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
     /// <param name="measurements">List of raw measurements from the data window.</param>
     /// <param name="config">Configuration for the machine prediction.</param>
     /// <returns>Feature vector as float array for a single sample (14 features).</returns>
-    public async Task<float[]> PreprocessAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
+    public float[] PreprocessAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
     {
         Log.Debug(
             "Preprocessing {Count} measurements for machine {MachineName}",
@@ -27,7 +27,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         float[] features = ExtractFeatures(measurements, config.InputSensors);
 
         // Apply Z-score normalization if enabled
-        float[] normalizedFeatures = await NormalizeFeaturesAsync(features, config.Preprocessing);
+        float[] normalizedFeatures = NormalizeFeaturesAsync(features, config.Preprocessing);
 
         Log.Debug("Preprocessing completed for machine {MachineName}", config.MachineName);
         return normalizedFeatures;
@@ -282,7 +282,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
     /// <param name="features">Raw features array.</param>
     /// <param name="preprocessing">Preprocessing configuration.</param>
     /// <returns>Normalized features array.</returns>
-    private async Task<float[]> NormalizeFeaturesAsync(float[] features, PreprocessingConfig preprocessing)
+    private float[] NormalizeFeaturesAsync(float[] features, PreprocessingConfig preprocessing)
     {
         if (!preprocessing.EnableZScoreNormalization)
         {
@@ -299,23 +299,20 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
 
         float[] normalized = new float[features.Length];
 
-        await Task.Run(() =>
+        for (int i = 0; i < features.Length && i < featureNames.Length; i++)
         {
-            for (int i = 0; i < features.Length && i < featureNames.Length; i++)
+            string featureName = featureNames[i];
+            if (preprocessing.NormalizationParameters.TryGetValue(featureName, out float[]? parameters) && parameters.Length >= 2)
             {
-                string featureName = featureNames[i];
-                if (preprocessing.NormalizationParameters.TryGetValue(featureName, out float[]? parameters) && parameters.Length >= 2)
-                {
-                    float mean = parameters[0];
-                    float std = parameters[1];
-                    normalized[i] = std > 1e-6f ? (features[i] - mean) / std : features[i];
-                }
-                else
-                {
-                    normalized[i] = features[i]; // No normalization if parameters not found
-                }
+                float mean = parameters[0];
+                float std = parameters[1];
+                normalized[i] = std > 1e-6f ? (features[i] - mean) / std : features[i];
             }
-        });
+            else
+            {
+                normalized[i] = features[i]; // No normalization if parameters not found
+            }
+        }
 
         return normalized;
     }

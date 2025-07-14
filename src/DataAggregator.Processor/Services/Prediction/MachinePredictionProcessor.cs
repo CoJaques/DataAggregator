@@ -93,7 +93,7 @@ public class MachinePredictionProcessor(
             }
 
             // Preprocess data using strategy
-            float[] preprocessedData = await PreprocessDataAsync(measurements, config);
+            float[] preprocessedData = PreprocessDataAsync(measurements, config);
 
             if (preprocessedData == null || preprocessedData.Length == 0)
             {
@@ -146,18 +146,18 @@ public class MachinePredictionProcessor(
     /// <param name="measurements">The list of measurements.</param>
     /// <param name="config">The machine prediction configuration.</param>
     /// <returns>The preprocessed data as a float array for a single sample.</returns>
-    private async Task<float[]> PreprocessDataAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
+    private float[] PreprocessDataAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
     {
         try
         {
             if (string.IsNullOrEmpty(config.PreprocessingStrategy))
             {
                 Log.Error("No preprocessing strategy configured for machine {MachineName}", config.MachineName);
-                return Array.Empty<float>();
+                return [];
             }
 
             IPreprocessingStrategy strategy = strategyFactory.CreateStrategy(config.PreprocessingStrategy);
-            float[] preprocessedData = await strategy.PreprocessAsync(measurements, config);
+            float[] preprocessedData = strategy.PreprocessAsync(measurements, config);
 
             Log.Debug(
                 "Preprocessed data for machine {MachineName} using strategy {Strategy}: {Features} features",
