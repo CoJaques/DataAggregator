@@ -122,12 +122,6 @@ public class MachinePredictionProcessor(
         }
     }
 
-    /// <summary>
-    /// Fetches data window for prediction.
-    /// </summary>
-    /// <param name="config">The machine prediction configuration.</param>
-    /// <param name="sensors">The list of available sensors with type information.</param>
-    /// <returns>A list of measurement data.</returns>
     private async Task<List<IMeasurementData>> FetchDataWindowAsync(MachinePredictionConfig config, List<SensorInfoDto> sensors)
     {
         DateTime endTime = DateTime.UtcNow;
@@ -140,12 +134,6 @@ public class MachinePredictionProcessor(
             sensors);
     }
 
-    /// <summary>
-    /// Preprocesses data using the configured strategy.
-    /// </summary>
-    /// <param name="measurements">The list of measurements.</param>
-    /// <param name="config">The machine prediction configuration.</param>
-    /// <returns>The preprocessed data as a float array for a single sample.</returns>
     private float[] PreprocessDataAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
     {
         try
@@ -174,12 +162,6 @@ public class MachinePredictionProcessor(
         }
     }
 
-    /// <summary>
-    /// Creates a prediction measurement from the model output.
-    /// </summary>
-    /// <param name="predictions">The prediction results.</param>
-    /// <param name="config">The machine prediction configuration.</param>
-    /// <returns>The prediction measurement.</returns>
     private IMeasurementData CreatePredictionMeasurementAsync(float[] predictions, MachinePredictionConfig config)
     {
         // For simplicity, we'll use the first prediction value

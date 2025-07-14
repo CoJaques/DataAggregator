@@ -15,7 +15,6 @@ public class InfluxV3Repository : IInfluxV3Repository, IDisposable
 {
     private readonly string _database = "Dataggregator";
     private InfluxDBClient? _client;
-    private string _organization = "Dataggregator";
 
     /// <inheritdoc/>
     public void InitializeAsync(string endpoint, string token, string org)
@@ -33,7 +32,6 @@ public class InfluxV3Repository : IInfluxV3Repository, IDisposable
             };
 
             _client = new InfluxDBClient(clientConfig);
-            _organization = org;
 
             Log.Information("InfluxDB v3 repository initialized with endpoint: {Endpoint}", endpoint);
         }

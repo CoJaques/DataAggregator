@@ -6,7 +6,7 @@ using Serilog;
 namespace DataAggregator.Processor.Services;
 
 /// <summary>
-/// Background service for managing machine predictions.
+/// Background service for processing machine predictions on a scheduled basis.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="PredictionBackgroundService"/> class.
@@ -72,9 +72,6 @@ public class PredictionBackgroundService(
         await base.StopAsync(cancellationToken);
     }
 
-    /// <summary>
-    /// Validates the configuration and checks for required files.
-    /// </summary>
     private void ValidateConfigurationAsync()
     {
         var enabledMachines = configuration.Value.Machines.Where(m => m.Enabled).ToList();
@@ -146,10 +143,6 @@ public class PredictionBackgroundService(
         }
     }
 
-    /// <summary>
-    /// Schedules prediction processing for a machine.
-    /// </summary>
-    /// <param name="machineConfig">The machine prediction configuration.</param>
     private void ScheduleMachine(MachinePredictionConfig machineConfig)
     {
         try
@@ -173,11 +166,6 @@ public class PredictionBackgroundService(
         }
     }
 
-    /// <summary>
-    /// Processes prediction for a specific machine.
-    /// </summary>
-    /// <param name="machineConfig">The machine prediction configuration.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ProcessMachineAsync(MachinePredictionConfig machineConfig)
     {
         // Skip if machine has errors
