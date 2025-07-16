@@ -27,4 +27,10 @@
     <ProjectReference Include="..\src\DataAggregator.Processor\DataAggregator.Processor.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="resources\opencn_model.onnx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
