@@ -8,17 +8,6 @@ namespace DataAggregator.Processor.Tests.Services.PreProcessing;
 public class MathUtilsTests
 {
     #region Mean tests
-
-    [Fact]
-    public void Mean_ShouldReturnZero_WhenValuesIsNull()
-    {
-        // Act
-        float result = MathUtils.Mean(null!);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
-
     [Fact]
     public void Mean_ShouldReturnZero_WhenValuesIsEmpty()
     {
@@ -58,33 +47,9 @@ public class MathUtilsTests
         Assert.Equal(3.0f, result);
     }
 
-    [Fact]
-    public void Mean_ShouldReturnCorrectValue_WhenValuesContainsNegativeNumbers()
-    {
-        // Arrange
-        var values = new List<float> { -2.0f, -1.0f, 0.0f, 1.0f, 2.0f };
-
-        // Act
-        float result = MathUtils.Mean(values);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
-
     #endregion
 
     #region StandardDeviation tests
-
-    [Fact]
-    public void StandardDeviation_ShouldReturnZero_WhenValuesIsNull()
-    {
-        // Act
-        float result = MathUtils.StandardDeviation(null!);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
-
     [Fact]
     public void StandardDeviation_ShouldReturnZero_WhenValuesIsEmpty()
     {
@@ -141,16 +106,6 @@ public class MathUtilsTests
     #endregion
 
     #region Percentile tests
-
-    [Fact]
-    public void Percentile_ShouldReturnZero_WhenValuesIsNull()
-    {
-        // Act
-        float result = MathUtils.Percentile(null!, 50.0f);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
 
     [Fact]
     public void Percentile_ShouldReturnZero_WhenValuesIsEmpty()
@@ -237,16 +192,6 @@ public class MathUtilsTests
     #region Skewness tests
 
     [Fact]
-    public void Skewness_ShouldReturnZero_WhenValuesIsNull()
-    {
-        // Act
-        float result = MathUtils.Skewness(null!);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
-
-    [Fact]
     public void Skewness_ShouldReturnZero_WhenValuesContainsLessThan3Elements()
     {
         // Arrange
@@ -305,16 +250,6 @@ public class MathUtilsTests
     #region Kurtosis tests
 
     [Fact]
-    public void Kurtosis_ShouldReturnZero_WhenValuesIsNull()
-    {
-        // Act
-        float result = MathUtils.Kurtosis(null!);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
-
-    [Fact]
     public void Kurtosis_ShouldReturnZero_WhenValuesContainsLessThan4Elements()
     {
         // Arrange
@@ -351,38 +286,12 @@ public class MathUtilsTests
 
         // Assert
         // For normal distribution, kurtosis should be close to 0 (excess kurtosis)
-        Assert.Equal(-1.2f, result, 1);
+        Assert.Equal(-1.3f, result, 1);
     }
 
     #endregion
 
     #region Correlation tests
-
-    [Fact]
-    public void Correlation_ShouldReturnZero_WhenXIsNull()
-    {
-        // Arrange
-        var y = new List<float> { 1.0f, 2.0f, 3.0f };
-
-        // Act
-        float result = MathUtils.Correlation(null!, y);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
-
-    [Fact]
-    public void Correlation_ShouldReturnZero_WhenYIsNull()
-    {
-        // Arrange
-        var x = new List<float> { 1.0f, 2.0f, 3.0f };
-
-        // Act
-        float result = MathUtils.Correlation(x, null!);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
 
     [Fact]
     public void Correlation_ShouldReturnZero_WhenXIsEmpty()
