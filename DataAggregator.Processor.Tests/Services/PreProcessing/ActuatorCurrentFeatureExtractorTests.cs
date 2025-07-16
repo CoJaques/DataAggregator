@@ -27,11 +27,11 @@ public class ActuatorCurrentFeatureExtractorTests
         MachinePredictionConfig config = CreateValidConfig();
 
         // Act
-        float[] result = _featureExtractor.PreprocessAsync(measurements, config);
+        var result = _featureExtractor.PreprocessAsync(measurements, config);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Length);
+        Assert.Equal(14, result.Count);
     }
 
     [Fact]
@@ -42,12 +42,12 @@ public class ActuatorCurrentFeatureExtractorTests
         MachinePredictionConfig config = CreateValidConfig();
 
         // Act
-        float[] result = _featureExtractor.PreprocessAsync(measurements, config);
+        var result = _featureExtractor.PreprocessAsync(measurements, config);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Length);
-        Assert.All(result, feature => Assert.Equal(0.0f, feature));
+        Assert.Equal(14, result.Count);
+        Assert.All(result, feature => Assert.Equal(0.0f, feature.Value[0]));
     }
 
     [Fact]
@@ -59,12 +59,12 @@ public class ActuatorCurrentFeatureExtractorTests
         config.InputSensors.Clear();
 
         // Act
-        float[] result = _featureExtractor.PreprocessAsync(measurements, config);
+        var result = _featureExtractor.PreprocessAsync(measurements, config);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Length);
-        Assert.All(result, feature => Assert.Equal(0.0f, feature));
+        Assert.Equal(14, result.Count);
+        Assert.All(result, feature => Assert.Equal(0.0f, feature.Value[0]));
     }
 
     [Fact]
@@ -75,15 +75,15 @@ public class ActuatorCurrentFeatureExtractorTests
         MachinePredictionConfig config = CreateValidConfig();
 
         // Act
-        float[] result = _featureExtractor.PreprocessAsync(measurements, config);
+        var result = _featureExtractor.PreprocessAsync(measurements, config);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Length);
+        Assert.Equal(14, result.Count);
 
         // Check that features are within reasonable bounds
-        Assert.All(result, feature => Assert.False(float.IsNaN(feature)));
-        Assert.All(result, feature => Assert.False(float.IsInfinity(feature)));
+        Assert.All(result, feature => Assert.False(float.IsNaN(feature.Value[0])));
+        Assert.All(result, feature => Assert.False(float.IsInfinity(feature.Value[0])));
     }
 
     [Fact]
@@ -99,12 +99,12 @@ public class ActuatorCurrentFeatureExtractorTests
         MachinePredictionConfig config = CreateValidConfig();
 
         // Act
-        float[] result = _featureExtractor.PreprocessAsync(measurements, config);
+        var result = _featureExtractor.PreprocessAsync(measurements, config);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Length);
-        Assert.All(result, feature => Assert.Equal(0.0f, feature));
+        Assert.Equal(14, result.Count);
+        Assert.All(result, feature => Assert.Equal(0.0f, feature.Value[0]));
     }
 
     [Fact]
@@ -118,12 +118,12 @@ public class ActuatorCurrentFeatureExtractorTests
         MachinePredictionConfig config = CreateValidConfig();
 
         // Act
-        float[] result = _featureExtractor.PreprocessAsync(measurements, config);
+        var result = _featureExtractor.PreprocessAsync(measurements, config);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Length);
-        Assert.All(result, feature => Assert.False(float.IsNaN(feature)));
+        Assert.Equal(14, result.Count);
+        Assert.All(result, feature => Assert.False(float.IsNaN(feature.Value[0])));
     }
 
     [Fact]
@@ -148,13 +148,13 @@ public class ActuatorCurrentFeatureExtractorTests
         MachinePredictionConfig config = CreateValidConfig();
 
         // Act
-        float[] result = _featureExtractor.PreprocessAsync(measurements, config);
+        var result = _featureExtractor.PreprocessAsync(measurements, config);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Length);
-        Assert.All(result, feature => Assert.False(float.IsNaN(feature)));
-        Assert.All(result, feature => Assert.False(float.IsInfinity(feature)));
+        Assert.Equal(14, result.Count);
+        Assert.All(result, feature => Assert.False(float.IsNaN(feature.Value[0])));
+        Assert.All(result, feature => Assert.False(float.IsInfinity(feature.Value[0])));
     }
 
     #endregion
