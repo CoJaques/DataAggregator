@@ -1,3 +1,5 @@
+using DataAggregator.Collector.Shared.Models;
+
 namespace DataAggregator.Processor.Services.Prediction;
 
 /// <summary>
@@ -11,6 +13,5 @@ public interface IOnnxPredictionEngine
     /// <param name="modelPath">The path to the ONNX model file.</param>
     /// <param name="inputData">The input data for prediction as a dictionary mapping input names to values.</param>
     /// <returns>The prediction results as a dictionary mapping output names to values.</returns>
-    public Task<Dictionary<string, float[]>> PredictAsync(string modelPath, Dictionary<string, float[]> inputData);
-
+    public Task<IEnumerable<IMeasurementData>> PredictAsync(string modelPath, IEnumerable<IMeasurementData> inputData);
 }
