@@ -18,33 +18,48 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
     #region Public methods
 
     /// <inheritdoc/>
-    public async Task<float[]> PredictAsync(string modelPath, float[] inputData)
+    public async Task<Dictionary<string, float[]>> PredictAsync(string modelPath, Dictionary<string, float[]> inputData)
     {
         try
         {
             InferenceSession session = LoadOrGetModel(modelPath);
 
-            // Prepare input tensor
-            int[] inputShape = [1, inputData.Length];
-            var inputTensor = new DenseTensor<float>(inputData, inputShape);
+            // Validate input data against model schema
+            ValidateInputData(session, inputData);
 
-            var inputs = new List<NamedOnnxValue>
-        {
-            NamedOnnxValue.CreateFromTensor("input", inputTensor),
-        };
-
-            // Run inference in background thread
-            return await Task.Run(() =>
+            // Prepare input tensors
+            var inputs = new List<NamedOnnxValue>();
+            foreach (KeyValuePair<string, float[]> kvp in inputData)
             {
-                using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
-                Tensor<float> outputTensor = results[0].AsTensor<float>();
+                string inputName = kvp.Key;
+                float[] inputValues = kvp.Value;
 
-                float[] predictions = [.. outputTensor];
+                // Create tensor with shape [1, inputValues.Length] for single sample
+                int[] inputShape = [1, inputValues.Length];
+                var inputTensor = new DenseTensor<float>(inputValues, inputShape);
 
-                Log.Debug("Prediction completed for model {ModelPath} with {InputFeatures} input features", modelPath, inputData.Length);
+                inputs.Add(NamedOnnxValue.CreateFromTensor(inputName, inputTensor));
+            }
 
-                return predictions;
-            });
+            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
+            
+            // Create output dictionary with output names and values
+            var outputData = new Dictionary<string, float[]>();
+            foreach (var result in results)
+            {
+                string outputName = result.Name;
+                Tensor<float> outputTensor = result.AsTensor<float>();
+                float[] outputValues = [.. outputTensor];
+                outputData[outputName] = outputValues;
+            }
+
+            Log.Debug(
+                "Prediction completed for model {ModelPath} with {InputCount} inputs and {OutputCount} outputs",
+                modelPath,
+                inputData.Count,
+                outputData.Count);
+
+            return await Task.FromResult(outputData);
         }
         catch (Exception ex)
         {
@@ -96,6 +111,24 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
             Log.Error(ex, "Failed to load ONNX model: {ModelPath}", modelPath);
             throw;
         }
+    }
+
+    private void ValidateInputData(InferenceSession session, Dictionary<string, float[]> inputData)
+    {
+        IReadOnlyDictionary<string, NodeMetadata> modelInputs = session.InputMetadata;
+
+        // Check if all required model inputs are provided
+        foreach (KeyValuePair<string, NodeMetadata> modelInput in modelInputs)
+        {
+            if (!inputData.ContainsKey(modelInput.Key))
+            {
+                throw new ArgumentException(
+                    $"Model requires input '{modelInput.Key}' but it was not provided. " +
+                    $"Available inputs: [{string.Join(", ", inputData.Keys)}]");
+            }
+        }
+
+        Log.Debug("Input validation passed for model with {InputCount} inputs", inputData.Count);
     }
 
     #endregion

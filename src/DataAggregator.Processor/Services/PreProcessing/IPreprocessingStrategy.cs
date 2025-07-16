@@ -13,6 +13,6 @@ public interface IPreprocessingStrategy
     /// </summary>
     /// <param name="measurements">List of raw measurements from the data window.</param>
     /// <param name="config">Configuration for the machine prediction.</param>
-    /// <returns>Feature vector as float array for a single sample.</returns>
-    public float[] PreprocessAsync(List<IMeasurementData> measurements, MachinePredictionConfig config);
+    /// <returns>Feature vector as dictionary mapping input names to values for a single sample.</returns>
+    public Dictionary<string, float[]> PreprocessAsync(List<IMeasurementData> measurements, MachinePredictionConfig config);
 }

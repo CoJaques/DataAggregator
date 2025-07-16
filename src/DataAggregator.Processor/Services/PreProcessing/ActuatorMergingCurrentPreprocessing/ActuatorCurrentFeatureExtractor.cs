@@ -17,8 +17,8 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
     /// </summary>
     /// <param name="measurements">List of raw measurements from the data window.</param>
     /// <param name="config">Configuration for the machine prediction.</param>
-    /// <returns>Feature vector as float array for a single sample (14 features).</returns>
-    public float[] PreprocessAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
+    /// <returns>Feature vector as dictionary mapping feature names to values for a single sample.</returns>
+    public Dictionary<string, float[]> PreprocessAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
     {
         Log.Debug(
             "Preprocessing {Count} measurements for machine {MachineName}",
@@ -31,8 +31,27 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         // Apply Z-score normalization if enabled
         float[] normalizedFeatures = NormalizeFeaturesAsync(features, config.Preprocessing);
 
+        // Create dictionary with one key per feature
+        var result = new Dictionary<string, float[]>
+        {
+            ["GlobalActivityRatio"] = [normalizedFeatures[0]],
+            ["GlobalChangeDensity"] = [normalizedFeatures[1]],
+            ["InterAxisMeanCorrelation"] = [normalizedFeatures[2]],
+            ["InterAxisMaxCorrelation"] = [normalizedFeatures[3]],
+            ["InterAxisCorrelationVariance"] = [normalizedFeatures[4]],
+            ["AxisSynchronization"] = [normalizedFeatures[5]],
+            ["AxisLoadBalance"] = [normalizedFeatures[6]],
+            ["TemporalStability"] = [normalizedFeatures[7]],
+            ["GlobalSkewness"] = [normalizedFeatures[8]],
+            ["GlobalKurtosis"] = [normalizedFeatures[9]],
+            ["GlobalTrendSlope"] = [normalizedFeatures[10]],
+            ["CoefficientOfVariation"] = [normalizedFeatures[11]],
+            ["NormalizedIqrMedian"] = [normalizedFeatures[12]],
+            ["NormalizedIqrMean"] = [normalizedFeatures[13]],
+        };
+
         Log.Debug("Preprocessing completed for machine {MachineName}", config.MachineName);
-        return normalizedFeatures;
+        return result;
     }
 
     #endregion
