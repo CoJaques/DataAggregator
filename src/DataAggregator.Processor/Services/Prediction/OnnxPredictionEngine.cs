@@ -1,3 +1,4 @@
+using DataAggregator.Collector.Shared.Models;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Serilog;
@@ -17,49 +18,43 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
 
     #region Public methods
 
-    /// <inheritdoc/>
-    public async Task<Dictionary<string, float[]>> PredictAsync(string modelPath, Dictionary<string, float[]> inputData)
+    /// <inheritdoc />
+    public async Task<IEnumerable<IMeasurementData>> PredictAsync(
+    string modelPath,
+    IEnumerable<IMeasurementData> inputData)
     {
         try
         {
             InferenceSession session = LoadOrGetModel(modelPath);
-
-            // Validate input data against model schema
             ValidateInputData(session, inputData);
 
-            // Prepare input tensors
             var inputs = new List<NamedOnnxValue>();
-            foreach (KeyValuePair<string, float[]> kvp in inputData)
+
+            foreach (IMeasurementData data in inputData)
             {
-                string inputName = kvp.Key;
-                float[] inputValues = kvp.Value;
-
-                // Create tensor with shape [1, inputValues.Length] for single sample
-                int[] inputShape = [1, inputValues.Length];
-                var inputTensor = new DenseTensor<float>(inputValues, inputShape);
-
-                inputs.Add(NamedOnnxValue.CreateFromTensor(inputName, inputTensor));
+                inputs.Add(CreateNamedOnnxValue(data));
             }
 
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
-            
-            // Create output dictionary with output names and values
-            var outputData = new Dictionary<string, float[]>();
-            foreach (var result in results)
+
+            var outputMeasurements = new List<IMeasurementData>();
+            DateTime now = DateTime.UtcNow;
+
+            foreach (DisposableNamedOnnxValue? result in results)
             {
-                string outputName = result.Name;
-                Tensor<float> outputTensor = result.AsTensor<float>();
-                float[] outputValues = [.. outputTensor];
-                outputData[outputName] = outputValues;
+                string name = result.Name;
+                Tensor<float> tensor = result.AsTensor<float>();
+                float[] values = [.. tensor];
+
+                for (int i = 0; i < values.Length; i++)
+                {
+                    outputMeasurements.Add(
+                        new MeasurementData<float>(now, $"{name}_{i}", values[i]));
+                }
             }
 
-            Log.Debug(
-                "Prediction completed for model {ModelPath} with {InputCount} inputs and {OutputCount} outputs",
-                modelPath,
-                inputData.Count,
-                outputData.Count);
-
-            return await Task.FromResult(outputData);
+            Log.Debug("Prediction completed for model {ModelPath} with {OutputCount} outputs", modelPath, outputMeasurements.Count);
+            return await Task.FromResult(outputMeasurements);
         }
         catch (Exception ex)
         {
@@ -113,22 +108,41 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
         }
     }
 
-    private void ValidateInputData(InferenceSession session, Dictionary<string, float[]> inputData)
+    private void ValidateInputData(InferenceSession session, IEnumerable<IMeasurementData> inputData)
     {
         IReadOnlyDictionary<string, NodeMetadata> modelInputs = session.InputMetadata;
 
         // Check if all required model inputs are provided
         foreach (KeyValuePair<string, NodeMetadata> modelInput in modelInputs)
         {
-            if (!inputData.ContainsKey(modelInput.Key))
+            if (!inputData.Any(x => modelInput.Key == x.SensorName))
             {
                 throw new ArgumentException(
-                    $"Model requires input '{modelInput.Key}' but it was not provided. " +
-                    $"Available inputs: [{string.Join(", ", inputData.Keys)}]");
+                    $"Model requires input '{modelInput.Key}' but it was not provided. ");
             }
         }
 
-        Log.Debug("Input validation passed for model with {InputCount} inputs", inputData.Count);
+        Log.Debug("Input validation passed for model with {InputCount} inputs", inputData.Count());
+    }
+
+    private NamedOnnxValue CreateNamedOnnxValue(IMeasurementData data)
+    {
+        string name = data.SensorName;
+        object rawValue = data.GetRawValue();
+
+        return rawValue switch
+        {
+            float[] fArray => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<float>(fArray, [1, fArray.Length])),
+            float f => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<float>(new[] { f }, [1, 1])),
+
+            int[] iArray => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<int>(iArray, [1, iArray.Length])),
+            int i => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<int>(new[] { i }, [1, 1])),
+
+            double[] dArray => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<double>(dArray, [1, dArray.Length])),
+            double d => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<double>(new[] { d }, [1, 1])),
+
+            _ => throw new NotSupportedException($"Unsupported data type {data.ValueType} for sensor {name}"),
+        };
     }
 
     #endregion
