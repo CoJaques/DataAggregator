@@ -15,6 +15,12 @@ public class RegistrationServiceClient(HttpClient httpClient) : IRegistrationSer
     /// <inheritdoc/>
     public async Task<CollectorInfoDto?> GetCollectorInfoAsync(string deviceName)
     {
+        if (deviceName == string.Empty)
+        {
+            Log.Error("Device name cannot be empty.");
+            throw new ArgumentException("Device name cannot be empty.", nameof(deviceName));
+        }
+
         try
         {
             HttpResponseMessage response = await httpClient.GetAsync($"/api/DeviceRegistration/collector/{deviceName}");
@@ -39,7 +45,7 @@ public class RegistrationServiceClient(HttpClient httpClient) : IRegistrationSer
         catch (Exception ex)
         {
             Log.Error(ex, "Error retrieving collector info for {DeviceName}", deviceName);
-            throw;
+            return null;
         }
     }
 }
