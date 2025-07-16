@@ -1,7 +1,5 @@
 namespace DataAggregator.Collector.Shared.Models;
 
-// TODO CJS -> Check if it's better to have a SensorConfig here and work with its datatype
-
 /// <summary>
 /// Interface for common measurement data operations regardless of the value type.
 /// </summary>
