@@ -18,8 +18,8 @@ public interface IDeviceRepository
     /// Creates a new device entry in the store asynchronously.
     /// </summary>
     /// <param name="device">The device to create.</param>
-    /// <returns>A task representing the asynchronous operation. The task result contains the created device.</returns>
-    public Task<Collector> CreateAsync(Collector device);
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public Task CreateAsync(Collector device);
 
     /// <summary>
     /// Updates an existing device entry in the store asynchronously.
