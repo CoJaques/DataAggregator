@@ -99,33 +99,29 @@ public class MachinePredictionProcessor(
             }
 
             // Preprocess data using strategy
-            Dictionary<string, float[]> preprocessedData = PreprocessDataAsync(measurements, config);
+            IEnumerable<IMeasurementData> preprocessedData = PreprocessDataAsync(measurements, config);
 
-            if (preprocessedData == null || preprocessedData.Count == 0)
+            if (preprocessedData == null || !preprocessedData.Any())
             {
                 Log.Warning("Data preprocessing failed for machine {MachineName}", config.MachineName);
                 return;
             }
 
             // Perform prediction
-            Dictionary<string, float[]> predictions = await predictionEngine.PredictAsync(config.ModelPath, preprocessedData);
+            IEnumerable<IMeasurementData> predictions = await predictionEngine.PredictAsync(config.ModelPath, preprocessedData);
 
-            if (predictions == null || predictions.Count == 0)
+            if (predictions == null || !predictions.Any())
             {
                 Log.Warning("No predictions returned for machine {MachineName}", config.MachineName);
                 return;
             }
 
-            // Create prediction measurement
-            IMeasurementData predictionMeasurement = CreatePredictionMeasurementAsync(predictions, config);
-
             // Write prediction to InfluxDB
-            await influxRepository.WriteMeasurementAsync(config.MachineName, predictionMeasurement);
+            await influxRepository.WriteMeasurementAsync(config.MachineName, predictions);
 
             Log.Information(
-                "Prediction completed for machine {MachineName}: {PredictionValue}",
-                config.MachineName,
-                predictionMeasurement.GetRawValue());
+                "Prediction completed for machine {MachineName}",
+                config.MachineName);
         }
         catch (Exception ex)
         {
@@ -150,60 +146,32 @@ public class MachinePredictionProcessor(
             sensors);
     }
 
-    private Dictionary<string, float[]> PreprocessDataAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
+    private IEnumerable<IMeasurementData> PreprocessDataAsync(IEnumerable<IMeasurementData> measurements, MachinePredictionConfig config)
     {
         try
         {
             if (string.IsNullOrEmpty(config.PreprocessingStrategy))
             {
                 Log.Error("No preprocessing strategy configured for machine {MachineName}", config.MachineName);
-                return new Dictionary<string, float[]>();
+                return Array.Empty<IMeasurementData>();
             }
 
             IPreprocessingStrategy strategy = strategyFactory.CreateStrategy(config.PreprocessingStrategy);
-            Dictionary<string, float[]> preprocessedData = strategy.PreprocessAsync(measurements, config);
+            IEnumerable<IMeasurementData> preprocessedData = strategy.PreprocessAsync(measurements, config);
 
             Log.Debug(
                 "Preprocessed data for machine {MachineName} using strategy {Strategy}: {InputCount} inputs",
                 config.MachineName,
                 config.PreprocessingStrategy,
-                preprocessedData.Count);
+                preprocessedData.Count());
 
             return preprocessedData;
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Error preprocessing data for machine {MachineName}", config.MachineName);
-            return new Dictionary<string, float[]>();
+            return Array.Empty<IMeasurementData>();
         }
-    }
-
-    private IMeasurementData CreatePredictionMeasurementAsync(Dictionary<string, float[]> predictions, MachinePredictionConfig config)
-    {
-        // TODO Fix here
-
-        // Log available outputs for debugging
-        Log.Debug(
-            "Available prediction outputs for machine {MachineName}: {OutputNames}",
-            config.MachineName,
-            string.Join(", ", predictions.Keys));
-
-        // For simplicity, we'll use the first prediction value
-        // In a real scenario, you might want to handle multiple outputs differently
-        // or configure which output to use in the config
-        var firstOutput = predictions.First();
-        float predictionValue = firstOutput.Value.Length > 0 ? firstOutput.Value[0] : 0.0f;
-
-        Log.Debug(
-            "Using prediction output '{OutputName}' with value {Value} for machine {MachineName}",
-            firstOutput.Key,
-            predictionValue,
-            config.MachineName);
-
-        return new MeasurementData<float>(
-            DateTime.UtcNow,
-            config.PredictionSensorName,
-            predictionValue);
     }
 
     #endregion

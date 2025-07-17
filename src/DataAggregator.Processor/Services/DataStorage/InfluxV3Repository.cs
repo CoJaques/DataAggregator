@@ -136,7 +136,7 @@ public class InfluxV3Repository : IDataRepository, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task WriteMeasurementAsync(string table, IMeasurementData measurement)
+    public async Task WriteMeasurementAsync(string table, IEnumerable<IMeasurementData> measurements)
     {
         if (_client == null)
         {
@@ -145,15 +145,23 @@ public class InfluxV3Repository : IDataRepository, IDisposable
 
         try
         {
-            PointData point = PointData
-                .Measurement(table)
-                .SetTimestamp(DateTime.SpecifyKind(measurement.TimeStamp, DateTimeKind.Utc))
-                .SetField(measurement.SensorName, measurement.GetRawValue())
-                .SetTag("type", "Prediction");
+            IEnumerable<PointData> groupedPoints = measurements
+                .GroupBy(m => m.TimeStamp)
+                .Select(group =>
+                {
+                    var fields = group.ToDictionary(
+                        m => m.SensorName,
+                        m => m.GetRawValue());
 
-            await _client.WritePointsAsync(new[] { point }, null, WritePrecision.Ms);
+                    return PointData
+                        .Measurement(table)
+                        .SetTimestamp(DateTime.SpecifyKind(group.Key, DateTimeKind.Utc))
+                        .SetFields(fields);
+                });
 
-            Log.Debug("Written measurement for table {Table}, sensor {Sensor}", table, measurement.SensorName);
+            await _client.WritePointsAsync(groupedPoints, null, WritePrecision.Ms);
+
+            Log.Information($"Inserted {groupedPoints.Count()} element");
         }
         catch (Exception ex)
         {

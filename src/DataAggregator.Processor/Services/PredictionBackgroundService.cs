@@ -86,7 +86,7 @@ public class PredictionBackgroundService(
     {
         var enabledMachines = configuration.Value.Machines.Where(m => m.Enabled).ToList();
 
-        if (!enabledMachines.Any())
+        if (enabledMachines.Count == 0)
         {
             Log.Warning("No enabled machines found in configuration");
             return;
@@ -124,14 +124,6 @@ public class PredictionBackgroundService(
                         machineConfig.MachineName);
 
                     throw new InvalidOperationException($"No input sensors configured for machine {machineConfig.MachineName}");
-                }
-
-                if (string.IsNullOrEmpty(machineConfig.PredictionSensorName))
-                {
-                    Log.Error(
-                        "Prediction sensor name is not configured for machine {MachineName}",
-                        machineConfig.MachineName);
-                    throw new InvalidOperationException($"Prediction sensor name is not configured for machine {machineConfig.MachineName}");
                 }
 
                 if (string.IsNullOrEmpty(machineConfig.PreprocessingStrategy))
