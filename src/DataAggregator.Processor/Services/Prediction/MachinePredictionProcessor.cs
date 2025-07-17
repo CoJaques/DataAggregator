@@ -19,7 +19,7 @@ namespace DataAggregator.Processor.Services.Prediction;
 /// <param name="predictionEngine">The ONNX prediction engine.</param>
 /// <param name="strategyFactory">The preprocessing strategy factory.</param>
 public class MachinePredictionProcessor(
-    IInfluxV3Repository influxRepository,
+    IDataRepository influxRepository,
     IRegistrationServiceClient registrationClient,
     IOnnxPredictionEngine predictionEngine,
     IPreprocessingStrategyFactory strategyFactory)

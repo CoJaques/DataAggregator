@@ -38,7 +38,7 @@ builder.Services.AddHealthChecks();
 builder.Services.Configure<PredictionServiceConfiguration>(builder.Configuration.GetSection("PredictionService"));
 
 // Register services
-builder.Services.AddScoped<IInfluxV3Repository, InfluxV3Repository>();
+builder.Services.AddScoped<IDataRepository, InfluxV3Repository>();
 builder.Services.AddScoped<IRegistrationServiceClient, RegistrationServiceClient>();
 builder.Services.AddScoped<IOnnxPredictionEngine, OnnxPredictionEngine>();
 builder.Services.AddScoped<IPreprocessingStrategyFactory, PreprocessingStrategyFactory>();
