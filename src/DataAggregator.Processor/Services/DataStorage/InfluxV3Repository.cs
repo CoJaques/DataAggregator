@@ -11,7 +11,7 @@ namespace DataAggregator.Processor.Services.DataStorage;
 /// <summary>
 /// Implementation of InfluxDB v3 repository for prediction service.
 /// </summary>
-public class InfluxV3Repository : IInfluxV3Repository, IDisposable
+public class InfluxV3Repository : IDataRepository, IDisposable
 {
     private readonly string _database = "Dataggregator";
     private InfluxDBClient? _client;

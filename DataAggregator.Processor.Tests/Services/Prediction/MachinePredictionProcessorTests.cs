@@ -16,7 +16,7 @@ namespace DataAggregator.Processor.Tests.Services.Prediction;
 /// </summary>
 public class MachinePredictionProcessorTests
 {
-    private readonly Mock<IInfluxV3Repository> _mockInfluxRepository;
+    private readonly Mock<IDataRepository> _mockInfluxRepository;
     private readonly Mock<IRegistrationServiceClient> _mockRegistrationClient;
     private readonly Mock<IOnnxPredictionEngine> _mockPredictionEngine;
     private readonly Mock<IPreprocessingStrategyFactory> _mockStrategyFactory;
@@ -28,7 +28,7 @@ public class MachinePredictionProcessorTests
     /// </summary>
     public MachinePredictionProcessorTests()
     {
-        _mockInfluxRepository = new Mock<IInfluxV3Repository>();
+        _mockInfluxRepository = new Mock<IDataRepository>();
         _mockRegistrationClient = new Mock<IRegistrationServiceClient>();
         _mockPredictionEngine = new Mock<IOnnxPredictionEngine>();
         _mockStrategyFactory = new Mock<IPreprocessingStrategyFactory>();

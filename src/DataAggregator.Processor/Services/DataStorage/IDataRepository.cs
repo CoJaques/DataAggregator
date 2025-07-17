@@ -4,9 +4,9 @@ using DataAggregator.Shared.DTOs;
 namespace DataAggregator.Processor.Services.DataStorage;
 
 /// <summary>
-/// Interface for InfluxDB v3 repository operations.
+/// Interface for data repository operations.
 /// </summary>
-public interface IInfluxV3Repository
+public interface IDataRepository
 {
     /// <summary>
     /// Initializes the repository with connection parameters.
