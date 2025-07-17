@@ -31,11 +31,6 @@ public class MachinePredictionConfig
     public List<string> InputSensors { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the name of the prediction sensor.
-    /// </summary>
-    public string PredictionSensorName { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the window size in seconds for data collection.
     /// </summary>
     public int WindowSizeSeconds { get; set; } = 60;

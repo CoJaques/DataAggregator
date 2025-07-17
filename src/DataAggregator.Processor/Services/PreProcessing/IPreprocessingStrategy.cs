@@ -14,5 +14,5 @@ public interface IPreprocessingStrategy
     /// <param name="measurements">List of raw measurements from the data window.</param>
     /// <param name="config">Configuration for the machine prediction.</param>
     /// <returns>Feature vector as dictionary mapping input names to values for a single sample.</returns>
-    public Dictionary<string, float[]> PreprocessAsync(List<IMeasurementData> measurements, MachinePredictionConfig config);
+    public IEnumerable<IMeasurementData> PreprocessAsync(IEnumerable<IMeasurementData> measurements, MachinePredictionConfig config);
 }

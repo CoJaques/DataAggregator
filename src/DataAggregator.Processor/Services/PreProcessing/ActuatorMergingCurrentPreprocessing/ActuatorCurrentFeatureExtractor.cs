@@ -18,11 +18,11 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
     /// <param name="measurements">List of raw measurements from the data window.</param>
     /// <param name="config">Configuration for the machine prediction.</param>
     /// <returns>Feature vector as dictionary mapping feature names to values for a single sample.</returns>
-    public Dictionary<string, float[]> PreprocessAsync(List<IMeasurementData> measurements, MachinePredictionConfig config)
+    public IEnumerable<IMeasurementData> PreprocessAsync(IEnumerable<IMeasurementData> measurements, MachinePredictionConfig config)
     {
         Log.Debug(
             "Preprocessing {Count} measurements for machine {MachineName}",
-            measurements.Count,
+            measurements.Count(),
             config.MachineName);
 
         // Extract the 14 features from measurements
@@ -31,23 +31,23 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         // Apply Z-score normalization if enabled
         float[] normalizedFeatures = NormalizeFeaturesAsync(features, config.Preprocessing);
 
-        // Create dictionary with one key per feature
-        var result = new Dictionary<string, float[]>
+        DateTime now = DateTime.UtcNow;
+        var result = new List<IMeasurementData>
         {
-            ["GlobalActivityRatio"] = [normalizedFeatures[0]],
-            ["GlobalChangeDensity"] = [normalizedFeatures[1]],
-            ["InterAxisMeanCorrelation"] = [normalizedFeatures[2]],
-            ["InterAxisMaxCorrelation"] = [normalizedFeatures[3]],
-            ["InterAxisCorrelationVariance"] = [normalizedFeatures[4]],
-            ["AxisSynchronization"] = [normalizedFeatures[5]],
-            ["AxisLoadBalance"] = [normalizedFeatures[6]],
-            ["TemporalStability"] = [normalizedFeatures[7]],
-            ["GlobalSkewness"] = [normalizedFeatures[8]],
-            ["GlobalKurtosis"] = [normalizedFeatures[9]],
-            ["GlobalTrendSlope"] = [normalizedFeatures[10]],
-            ["CoefficientOfVariation"] = [normalizedFeatures[11]],
-            ["NormalizedIqrMedian"] = [normalizedFeatures[12]],
-            ["NormalizedIqrMean"] = [normalizedFeatures[13]],
+            new MeasurementData<float>(now, "GlobalActivityRatio", normalizedFeatures[0]),
+            new MeasurementData<float>(now, "GlobalChangeDensity", normalizedFeatures[1]),
+            new MeasurementData<float>(now, "InterAxisMeanCorrelation", normalizedFeatures[2]),
+            new MeasurementData<float>(now, "InterAxisMaxCorrelation", normalizedFeatures[3]),
+            new MeasurementData<float>(now, "InterAxisCorrelationVariance", normalizedFeatures[4]),
+            new MeasurementData<float>(now, "AxisSynchronization", normalizedFeatures[5]),
+            new MeasurementData<float>(now, "AxisLoadBalance", normalizedFeatures[6]),
+            new MeasurementData<float>(now, "TemporalStability", normalizedFeatures[7]),
+            new MeasurementData<float>(now, "GlobalSkewness", normalizedFeatures[8]),
+            new MeasurementData<float>(now, "GlobalKurtosis", normalizedFeatures[9]),
+            new MeasurementData<float>(now, "GlobalTrendSlope", normalizedFeatures[10]),
+            new MeasurementData<float>(now, "CoefficientOfVariation", normalizedFeatures[11]),
+            new MeasurementData<float>(now, "NormalizedIqrMedian", normalizedFeatures[12]),
+            new MeasurementData<float>(now, "NormalizedIqrMean", normalizedFeatures[13]),
         };
 
         Log.Debug("Preprocessing completed for machine {MachineName}", config.MachineName);
@@ -58,7 +58,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
 
     #region Private methods
 
-    private float[] ExtractFeatures(List<IMeasurementData> measurements, List<string> sensors)
+    private float[] ExtractFeatures(IEnumerable<IMeasurementData> measurements, List<string> sensors)
     {
         if (measurements == null || sensors == null || sensors.Count == 0)
         {
@@ -119,24 +119,24 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         int significantChanges = diffSignals.Count(x => x > globalStd * 1.5);
         float changeDensity = significantChanges / (float)allCurrents.Count;
 
-        // Extract axis currents for correlation analysis
-        List<List<float>> axisCurrents = ExtractAxisCurrents(measurements, sensors);
+        // Extract actuator currents for correlation analysis
+        List<List<float>> actuatorsCurrents = ExtractActuatorCurrents(measurements, sensors);
 
-        // Features 3-5: Inter-axis correlations
-        List<float> correlations = CalculateInterAxisCorrelations(axisCurrents);
+        // Features 3-5: Inter-actuator correlations
+        List<float> correlations = CalculateInterActuatorCorrelations(actuatorsCurrents);
         float meanCorrelation = correlations.Count > 0 ? correlations.Average() : 0f;
         float maxCorrelation = correlations.Count > 0 ? correlations.Max() : 0f;
         float correlationVariance = correlations.Count > 0 ? MathUtils.StandardDeviation(correlations) : 0f;
 
-        // Feature 6: Axis Synchronization
-        var axisMeans = axisCurrents.Select(MathUtils.Mean).ToList();
-        float meanOfMeans = axisMeans.Average();
-        float synchronization = meanOfMeans != 0 ? 1 - (MathUtils.StandardDeviation(axisMeans) / Math.Abs(meanOfMeans)) : 1f;
+        // Feature 6: Actuator Synchronization
+        var actuatorsMeans = actuatorsCurrents.Select(MathUtils.Mean).ToList();
+        float meanOfMeans = actuatorsMeans.Average();
+        float synchronization = meanOfMeans != 0 ? 1 - (MathUtils.StandardDeviation(actuatorsMeans) / Math.Abs(meanOfMeans)) : 1f;
 
-        // Feature 7: Axis Load Balance
-        var axisEnergies = axisCurrents.Select(axis => axis.Sum(x => x * x)).ToList();
-        float meanEnergy = axisEnergies.Average();
-        float loadBalance = meanEnergy != 0 ? 1 - (MathUtils.StandardDeviation(axisEnergies) / meanEnergy) : 1f;
+        // Feature 7: Actuator Load Balance
+        var actuatorsEnergies = actuatorsCurrents.Select(actuator => actuator.Sum(x => x * x)).ToList();
+        float meanEnergy = actuatorsEnergies.Average();
+        float loadBalance = meanEnergy != 0 ? 1 - (MathUtils.StandardDeviation(actuatorsEnergies) / meanEnergy) : 1f;
 
         // Feature 8: Temporal Stability
         float temporalStability = CalculateTemporalStability(allCurrents);
@@ -153,38 +153,38 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         float normIqrMedian = Math.Abs(globalMedian) > 1e-8f ? globalIqr / globalMedian : 0f;
         float normIqrMean = Math.Abs(globalMean) > 1e-8f ? globalIqr / globalMean : 0f;
 
-        return new float[]
-        {
-            activeRatio,            // 1. GlobalActivityRatio
-            changeDensity,          // 2. GlobalChangeDensity
-            meanCorrelation,        // 3. InterAxisMeanCorrelation
-            maxCorrelation,         // 4. InterAxisMaxCorrelation
-            correlationVariance,    // 5. InterAxisCorrelationVariance
-            synchronization,        // 6. AxisSynchronization
-            loadBalance,            // 7. AxisLoadBalance
-            temporalStability,      // 8. TemporalStability
-            globalSkewness,         // 9. GlobalSkewness
-            globalKurtosis,         // 10. GlobalKurtosis
-            trendSlope,             // 11. GlobalTrendSlope
-            coeffVar,               // 12. CoefficientOfVariation
-            normIqrMedian,          // 13. NormalizedIqrMedian
-            normIqrMean,            // 14. NormalizedIqrMean
-        };
+        return
+        [
+            activeRatio,
+            changeDensity,
+            meanCorrelation,
+            maxCorrelation,
+            correlationVariance,
+            synchronization,
+            loadBalance,
+            temporalStability,
+            globalSkewness,
+            globalKurtosis,
+            trendSlope,
+            coeffVar,
+            normIqrMedian,
+            normIqrMean,
+        ];
     }
 
-    private List<List<float>> ExtractAxisCurrents(List<IMeasurementData> measurements, List<string> sensors)
+    private List<List<float>> ExtractActuatorCurrents(IEnumerable<IMeasurementData> measurements, List<string> sensors)
     {
-        var axisCurrents = new List<List<float>>();
+        var actuatorsCurrents = new List<List<float>>();
 
         // Group measurements by sensor
         var measurementsBySensor = measurements
             .GroupBy(m => m.SensorName)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        // Extract currents for each sensor/axis
+        // Extract currents for each sensor/Actuator
         foreach (string sensor in sensors)
         {
-            var axisCurrent = new List<float>();
+            var actuatorCurrent = new List<float>();
             if (measurementsBySensor.TryGetValue(sensor, out List<IMeasurementData>? sensorMeasurements))
             {
                 foreach (IMeasurementData? measurement in sensorMeasurements.OrderBy(m => m.TimeStamp))
@@ -192,34 +192,34 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
                     object value = measurement.GetRawValue();
                     if (value is float floatValue)
                     {
-                        axisCurrent.Add(floatValue);
+                        actuatorCurrent.Add(floatValue);
                     }
                     else if (value is double doubleValue)
                     {
-                        axisCurrent.Add((float)doubleValue);
+                        actuatorCurrent.Add((float)doubleValue);
                     }
                     else if (value is int intValue)
                     {
-                        axisCurrent.Add(intValue);
+                        actuatorCurrent.Add(intValue);
                     }
                 }
             }
 
-            axisCurrents.Add(axisCurrent);
+            actuatorsCurrents.Add(actuatorCurrent);
         }
 
-        return axisCurrents;
+        return actuatorsCurrents;
     }
 
-    private List<float> CalculateInterAxisCorrelations(List<List<float>> axisCurrents)
+    private List<float> CalculateInterActuatorCorrelations(List<List<float>> actuatorsCurrents)
     {
         var correlations = new List<float>();
 
-        for (int axis1 = 0; axis1 < axisCurrents.Count; axis1++)
+        for (int actuator1 = 0; actuator1 < actuatorsCurrents.Count; actuator1++)
         {
-            for (int axis2 = axis1 + 1; axis2 < axisCurrents.Count; axis2++)
+            for (int actuator2 = actuator1 + 1; actuator2 < actuatorsCurrents.Count; actuator2++)
             {
-                float corr = MathUtils.Correlation(axisCurrents[axis1], axisCurrents[axis2]);
+                float corr = MathUtils.Correlation(actuatorsCurrents[actuator1], actuatorsCurrents[actuator2]);
                 if (!float.IsNaN(corr) && !float.IsInfinity(corr))
                 {
                     correlations.Add(corr);

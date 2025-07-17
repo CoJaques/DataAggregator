@@ -32,5 +32,5 @@ public interface IDataRepository
     /// <param name="table">The table name (machine name).</param>
     /// <param name="measurement">The measurement data to write.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task WriteMeasurementAsync(string table, IMeasurementData measurement);
+    public Task WriteMeasurementAsync(string table, IEnumerable<IMeasurementData> measurement);
 }
