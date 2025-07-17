@@ -94,7 +94,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         }
 
         // Filter out invalid values
-        allCurrents = allCurrents.Where(x => !float.IsNaN(x) && !float.IsInfinity(x)).ToList();
+        allCurrents = [.. allCurrents.Where(x => !float.IsNaN(x) && !float.IsInfinity(x))];
 
         if (allCurrents.Count == 0)
         {

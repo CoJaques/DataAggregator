@@ -1,4 +1,5 @@
 using System.Reflection.Metadata;
+using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Processor.Services.Prediction;
 using Microsoft.ML.OnnxRuntime;
 
@@ -24,11 +25,12 @@ public class OnnxPredictionEngineTests : IDisposable
     {
         // Arrange
         string nonExistentModelPath = "non_existent_model.onnx";
-        var inputData = new Dictionary<string, float[]> 
-        { 
-            ["GlobalActivityRatio"] = [1.0f],
-            ["GlobalChangeDensity"] = [2.0f],
-            ["InterAxisMeanCorrelation"] = [3.0f]
+
+        var inputData = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(DateTime.UtcNow, "GlobalActivityRatio", 1.0f),
+            new MeasurementData<float>(DateTime.UtcNow, "GlobalChangeDensity", 2.0f),
+            new MeasurementData<float>(DateTime.UtcNow, "InterAxisMeanCorrelation", 3.0f),
         };
 
         // Act & Assert
@@ -44,33 +46,22 @@ public class OnnxPredictionEngineTests : IDisposable
         string copyPath = Path.Combine("resources", "opencn_model_copy.onnx");
         File.Copy(modelPath, copyPath);
 
-        var inputData = new Dictionary<string, float[]> 
-        { 
-            ["GlobalActivityRatio"] = [1.0f],
-            ["GlobalChangeDensity"] = [2.0f],
-            ["InterAxisMeanCorrelation"] = [3.0f],
-            ["InterAxisMaxCorrelation"] = [4.0f],
-            ["InterAxisCorrelationVariance"] = [5.0f],
-            ["AxisSynchronization"] = [6.0f],
-            ["AxisLoadBalance"] = [7.0f],
-            ["TemporalStability"] = [8.0f],
-            ["GlobalSkewness"] = [9.0f],
-            ["GlobalKurtosis"] = [10.0f],
-            ["GlobalTrendSlope"] = [11.0f],
-            ["CoefficientOfVariation"] = [12.0f],
-            ["NormalizedIqrMedian"] = [13.0f],
-            ["NormalizedIqrMean"] = [14.0f]
+        var inputData = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(DateTime.UtcNow, "GlobalActivityRatio", 1.0f),
+            new MeasurementData<float>(DateTime.UtcNow, "GlobalChangeDensity", 2.0f),
+            new MeasurementData<float>(DateTime.UtcNow, "InterAxisMeanCorrelation", 3.0f),
         };
 
         // Act
-        Dictionary<string, float[]> result1 = await _predictionEngine.PredictAsync(copyPath, inputData);
+        IEnumerable<IMeasurementData> result1 = await _predictionEngine.PredictAsync(copyPath, inputData);
         File.Delete(copyPath); // Simulate model file deletion
-        Dictionary<string, float[]> result2 = await _predictionEngine.PredictAsync(copyPath, inputData);
+        IEnumerable<IMeasurementData> result2 = await _predictionEngine.PredictAsync(copyPath, inputData);
 
         // Assert
         Assert.NotNull(result1);
         Assert.NotNull(result2);
-        Assert.Equal(result1.Count, result2.Count);
+        Assert.Equal(result1.Count(), result2.Count());
     }
 
     [Fact]
@@ -78,32 +69,34 @@ public class OnnxPredictionEngineTests : IDisposable
     {
         // Arrange
         string modelPath = _testModelPath;
-        var inputData = new Dictionary<string, float[]> 
-        { 
-            ["GlobalActivityRatio"] = [1.0f],
-            ["GlobalChangeDensity"] = [2.0f],
-            ["InterAxisMeanCorrelation"] = [3.0f],
-            ["InterAxisMaxCorrelation"] = [4.0f],
-            ["InterAxisCorrelationVariance"] = [5.0f],
-            ["AxisSynchronization"] = [6.0f],
-            ["AxisLoadBalance"] = [7.0f],
-            ["TemporalStability"] = [8.0f],
-            ["GlobalSkewness"] = [9.0f],
-            ["GlobalKurtosis"] = [10.0f],
-            ["GlobalTrendSlope"] = [11.0f],
-            ["CoefficientOfVariation"] = [12.0f],
-            ["NormalizedIqrMedian"] = [13.0f],
-            ["NormalizedIqrMean"] = [14.0f]
+        var now = DateTime.UtcNow;
+        var inputData = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(now, "GlobalActivityRatio", 1.0f),
+            new MeasurementData<float>(now, "GlobalChangeDensity", 2.0f),
+            new MeasurementData<float>(now, "InterAxisMeanCorrelation", 3.0f),
+            new MeasurementData<float>(now, "InterAxisMaxCorrelation", 4.0f),
+            new MeasurementData<float>(now, "InterAxisCorrelationVariance", 5.0f),
+            new MeasurementData<float>(now, "AxisSynchronization", 6.0f),
+            new MeasurementData<float>(now, "AxisLoadBalance", 7.0f),
+            new MeasurementData<float>(now, "TemporalStability", 8.0f),
+            new MeasurementData<float>(now, "GlobalSkewness", 9.0f),
+            new MeasurementData<float>(now, "GlobalKurtosis", 10.0f),
+            new MeasurementData<float>(now, "GlobalTrendSlope", 11.0f),
+            new MeasurementData<float>(now, "CoefficientOfVariation", 12.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMedian", 13.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMean", 14.0f),
         };
 
         try
         {
             // Act
-            Dictionary<string, float[]> result = await _predictionEngine.PredictAsync(modelPath, inputData);
+            IEnumerable<IMeasurementData> result = await _predictionEngine.PredictAsync(modelPath, inputData);
 
             // Assert
             Assert.NotNull(result);
-            Assert.True(result.Count > 0);
+            Assert.True(result.Count() > 0);
+            // TODO ADD RESULT
         }
         finally
         {
@@ -120,12 +113,12 @@ public class OnnxPredictionEngineTests : IDisposable
     {
         // Arrange
         string modelPath = _testModelPath;
-        var inputData = new Dictionary<string, float[]> { ["GlobalActivityRatio"] = new float[0] };
+        var inputData = new List<IMeasurementData>();
 
         try
         {
             // Act
-            Dictionary<string, float[]> result = await _predictionEngine.PredictAsync(modelPath, inputData);
+            IEnumerable<IMeasurementData> result = await _predictionEngine.PredictAsync(modelPath, inputData);
 
             // Assert
             Assert.NotNull(result);
@@ -138,49 +131,6 @@ public class OnnxPredictionEngineTests : IDisposable
                 File.Delete(modelPath);
             }
         }
-    }
-
-    #endregion
-
-    #region GetModelMetadataAsync tests
-
-    [Fact]
-    public async Task GetModelMetadataAsync_ShouldReturnMetadata_WhenValidModelProvided()
-    {
-        // Arrange
-        string modelPath = _testModelPath;
-
-        try
-        {
-            // Act
-            OnnxModelMetadata metadata = await _predictionEngine.GetModelMetadataAsync(modelPath);
-
-            // Assert
-            Assert.NotNull(metadata);
-            Assert.NotNull(metadata.InputNames);
-            Assert.NotNull(metadata.OutputNames);
-            Assert.NotNull(metadata.InputShapes);
-            Assert.NotNull(metadata.OutputShapes);
-        }
-        finally
-        {
-            // Cleanup
-            if (File.Exists(modelPath))
-            {
-                File.Delete(modelPath);
-            }
-        }
-    }
-
-    [Fact]
-    public async Task GetModelMetadataAsync_ShouldThrowFileNotFoundException_WhenModelPathDoesNotExist()
-    {
-        // Arrange
-        string nonExistentModelPath = "non_existent_model.onnx";
-
-        // Act & Assert
-        FileNotFoundException exception = await Assert.ThrowsAsync<FileNotFoundException>(
-            () => _predictionEngine.GetModelMetadataAsync(nonExistentModelPath));
     }
 
     #endregion
@@ -205,7 +155,10 @@ public class OnnxPredictionEngineTests : IDisposable
     {
         // Arrange
         string modelPath = _testModelPath;
-        var inputData = new Dictionary<string, float[]> { ["GlobalActivityRatio"] = [1.0f] };
+        var inputData = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(DateTime.UtcNow, "GlobalActivityRatio", 1.0f),
+        };
 
         try
         {

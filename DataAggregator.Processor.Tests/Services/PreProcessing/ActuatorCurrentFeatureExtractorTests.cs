@@ -31,7 +31,7 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count);
+        Assert.Equal(14, result.Count());
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count);
-        Assert.All(result, feature => Assert.Equal(0.0f, feature.Value[0]));
+        Assert.Equal(14, result.Count());
+        Assert.All(result, feature => Assert.Equal(0.0f, (float)feature.GetRawValue()));
     }
 
     [Fact]
@@ -63,8 +63,8 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count);
-        Assert.All(result, feature => Assert.Equal(0.0f, feature.Value[0]));
+        Assert.Equal(14, result.Count());
+        Assert.All(result, feature => Assert.Equal(0.0f, (float)feature.GetRawValue()));
     }
 
     [Fact]
@@ -79,11 +79,11 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count);
+        Assert.Equal(14, result.Count());
 
         // Check that features are within reasonable bounds
-        Assert.All(result, feature => Assert.False(float.IsNaN(feature.Value[0])));
-        Assert.All(result, feature => Assert.False(float.IsInfinity(feature.Value[0])));
+        Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
+        Assert.All(result, feature => Assert.False(float.IsInfinity((float)feature.GetRawValue())));
     }
 
     [Fact]
@@ -103,8 +103,8 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count);
-        Assert.All(result, feature => Assert.Equal(0.0f, feature.Value[0]));
+        Assert.Equal(14, result.Count());
+        Assert.All(result, feature => Assert.Equal(0.0f, (float)feature.GetRawValue()));
     }
 
     [Fact]
@@ -122,8 +122,8 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count);
-        Assert.All(result, feature => Assert.False(float.IsNaN(feature.Value[0])));
+        Assert.Equal(14, result.Count());
+        Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
     }
 
     [Fact]
@@ -152,9 +152,9 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count);
-        Assert.All(result, feature => Assert.False(float.IsNaN(feature.Value[0])));
-        Assert.All(result, feature => Assert.False(float.IsInfinity(feature.Value[0])));
+        Assert.Equal(14, result.Count());
+        Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
+        Assert.All(result, feature => Assert.False(float.IsInfinity((float)feature.GetRawValue())));
     }
 
     #endregion
@@ -175,7 +175,6 @@ public class ActuatorCurrentFeatureExtractorTests
         MachineName = "test_machine",
         ModelPath = "test_model.onnx",
         InputSensors = ["sensor1", "sensor2"],
-        PredictionSensorName = "prediction_sensor",
         PreprocessingStrategy = "ActuatorMergingCurrent",
         WindowSizeSeconds = 1,
         CycleIntervalSeconds = 1,
