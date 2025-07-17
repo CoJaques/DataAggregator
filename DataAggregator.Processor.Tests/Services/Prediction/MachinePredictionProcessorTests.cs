@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services.DataStorage;
@@ -56,7 +57,7 @@ public class MachinePredictionProcessorTests
 
         // Assert
         _mockInfluxRepository.Verify(x => x.QueryMeasurementsAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SensorInfoDto>>()), Times.Never);
-        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, float[]>>()), Times.Never);
+        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<IEnumerable<IMeasurementData>>()), Times.Never);
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class MachinePredictionProcessorTests
 
         // Assert
         _mockInfluxRepository.Verify(x => x.QueryMeasurementsAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SensorInfoDto>>()), Times.Never);
-        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, float[]>>()), Times.Never);
+        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<IEnumerable<IMeasurementData>>()), Times.Never);
     }
 
     [Fact]
@@ -93,8 +94,8 @@ public class MachinePredictionProcessorTests
         await _processor.ProcessAsync(config);
 
         // Assert
-        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, float[]>>()), Times.Never);
-        _mockInfluxRepository.Verify(x => x.WriteMeasurementAsync(It.IsAny<string>(), It.IsAny<IMeasurementData>()), Times.Never);
+        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<IEnumerable<IMeasurementData>>()), Times.Never);
+        _mockInfluxRepository.Verify(x => x.WriteMeasurementAsync(It.IsAny<string>(), It.IsAny<IEnumerable<IMeasurementData>>()), Times.Never);
     }
 
     [Fact]
@@ -112,14 +113,14 @@ public class MachinePredictionProcessorTests
         _mockStrategyFactory.Setup(x => x.CreateStrategy(config.PreprocessingStrategy))
             .Returns(_mockPreprocessingStrategy.Object);
         _mockPreprocessingStrategy.Setup(x => x.PreprocessAsync(It.IsAny<List<IMeasurementData>>(), It.IsAny<MachinePredictionConfig>()))
-            .Returns(new Dictionary<string, float[]>());
+            .Returns(new List<IMeasurementData>());
 
         // Act
         await _processor.ProcessAsync(config);
 
         // Assert
-        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, float[]>>()), Times.Never);
-        _mockInfluxRepository.Verify(x => x.WriteMeasurementAsync(It.IsAny<string>(), It.IsAny<IMeasurementData>()), Times.Never);
+        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<IEnumerable<IMeasurementData>>()), Times.Never);
+        _mockInfluxRepository.Verify(x => x.WriteMeasurementAsync(It.IsAny<string>(), It.IsAny<IEnumerable<IMeasurementData>>()), Times.Never);
     }
 
     [Fact]
@@ -129,24 +130,32 @@ public class MachinePredictionProcessorTests
         MachinePredictionConfig config = CreateValidMachineConfig();
         CollectorInfoDto collectorInfo = CreateCollectorInfoWithSensors(config.InputSensors);
         List<IMeasurementData> measurements = CreateTestMeasurements();
-        var preprocessedData = new Dictionary<string, float[]> 
-        { 
-            ["GlobalActivityRatio"] = [1.0f],
-            ["GlobalChangeDensity"] = [2.0f],
-            ["InterAxisMeanCorrelation"] = [3.0f],
-            ["InterAxisMaxCorrelation"] = [4.0f],
-            ["InterAxisCorrelationVariance"] = [5.0f],
-            ["AxisSynchronization"] = [6.0f],
-            ["AxisLoadBalance"] = [7.0f],
-            ["TemporalStability"] = [8.0f],
-            ["GlobalSkewness"] = [9.0f],
-            ["GlobalKurtosis"] = [10.0f],
-            ["GlobalTrendSlope"] = [11.0f],
-            ["CoefficientOfVariation"] = [12.0f],
-            ["NormalizedIqrMedian"] = [13.0f],
-            ["NormalizedIqrMean"] = [14.0f]
+        var now = DateTime.UtcNow;
+        var preprocessedData = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(now, "GlobalActivityRatio", 1.0f),
+            new MeasurementData<float>(now, "GlobalChangeDensity", 2.0f),
+            new MeasurementData<float>(now, "InterAxisMeanCorrelation", 3.0f),
+            new MeasurementData<float>(now, "InterAxisMaxCorrelation", 4.0f),
+            new MeasurementData<float>(now, "InterAxisCorrelationVariance", 5.0f),
+            new MeasurementData<float>(now, "AxisSynchronization", 6.0f),
+            new MeasurementData<float>(now, "AxisLoadBalance", 7.0f),
+            new MeasurementData<float>(now, "TemporalStability", 8.0f),
+            new MeasurementData<float>(now, "GlobalSkewness", 9.0f),
+            new MeasurementData<float>(now, "GlobalKurtosis", 10.0f),
+            new MeasurementData<float>(now, "GlobalTrendSlope", 11.0f),
+            new MeasurementData<float>(now, "CoefficientOfVariation", 12.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMedian", 13.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMean", 14.0f),
         };
-        float[] predictions = new float[] { 0.85f };
+
+        IEnumerable<IMeasurementData> results =
+            new List<IMeasurementData>
+            {
+                new MeasurementData<float>(now, "Prediction", 0.85f)
+            };
+
+        float[] predictions = [0.85f];
 
         _mockRegistrationClient.Setup(x => x.GetCollectorInfoAsync(config.MachineName))
             .ReturnsAsync(collectorInfo);
@@ -157,7 +166,7 @@ public class MachinePredictionProcessorTests
         _mockPreprocessingStrategy.Setup(x => x.PreprocessAsync(It.IsAny<List<IMeasurementData>>(), It.IsAny<MachinePredictionConfig>()))
             .Returns(preprocessedData);
         _mockPredictionEngine.Setup(x => x.PredictAsync(config.ModelPath, preprocessedData))
-            .ReturnsAsync(predictions);
+            .ReturnsAsync(results);
 
         // Act
         await _processor.ProcessAsync(config);
@@ -175,7 +184,7 @@ public class MachinePredictionProcessorTests
             It.IsAny<DateTime>(),
             It.IsAny<List<SensorInfoDto>>()), Times.Once);
         _mockPredictionEngine.Verify(x => x.PredictAsync(config.ModelPath, preprocessedData), Times.Once);
-        _mockInfluxRepository.Verify(x => x.WriteMeasurementAsync(config.MachineName, It.IsAny<IMeasurementData>()), Times.Once);
+        _mockInfluxRepository.Verify(x => x.WriteMeasurementAsync(config.MachineName, It.IsAny<IEnumerable<IMeasurementData>>()), Times.Once);
     }
 
     [Fact]
@@ -186,24 +195,30 @@ public class MachinePredictionProcessorTests
         CollectorInfoDto collectorInfo1 = CreateCollectorInfoWithSensors(config.InputSensors, "endpoint1");
         CollectorInfoDto collectorInfo2 = CreateCollectorInfoWithSensors(config.InputSensors, "endpoint2");
         List<IMeasurementData> measurements = CreateTestMeasurements();
-        var preprocessedData = new Dictionary<string, float[]> 
-        { 
-            ["GlobalActivityRatio"] = [1.0f],
-            ["GlobalChangeDensity"] = [2.0f],
-            ["InterAxisMeanCorrelation"] = [3.0f],
-            ["InterAxisMaxCorrelation"] = [4.0f],
-            ["InterAxisCorrelationVariance"] = [5.0f],
-            ["AxisSynchronization"] = [6.0f],
-            ["AxisLoadBalance"] = [7.0f],
-            ["TemporalStability"] = [8.0f],
-            ["GlobalSkewness"] = [9.0f],
-            ["GlobalKurtosis"] = [10.0f],
-            ["GlobalTrendSlope"] = [11.0f],
-            ["CoefficientOfVariation"] = [12.0f],
-            ["NormalizedIqrMedian"] = [13.0f],
-            ["NormalizedIqrMean"] = [14.0f]
+
+        var now = DateTime.UtcNow;
+        var preprocessedData = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(now, "GlobalActivityRatio", 1.0f),
+            new MeasurementData<float>(now, "GlobalChangeDensity", 2.0f),
+            new MeasurementData<float>(now, "InterAxisMeanCorrelation", 3.0f),
+            new MeasurementData<float>(now, "InterAxisMaxCorrelation", 4.0f),
+            new MeasurementData<float>(now, "InterAxisCorrelationVariance", 5.0f),
+            new MeasurementData<float>(now, "AxisSynchronization", 6.0f),
+            new MeasurementData<float>(now, "AxisLoadBalance", 7.0f),
+            new MeasurementData<float>(now, "TemporalStability", 8.0f),
+            new MeasurementData<float>(now, "GlobalSkewness", 9.0f),
+            new MeasurementData<float>(now, "GlobalKurtosis", 10.0f),
+            new MeasurementData<float>(now, "GlobalTrendSlope", 11.0f),
+            new MeasurementData<float>(now, "CoefficientOfVariation", 12.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMedian", 13.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMean", 14.0f),
         };
-        float[] predictions = new float[] { 0.85f };
+
+        var predictions = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(now, "Prediction", 0.85f)
+        };
 
         _mockRegistrationClient.SetupSequence(x => x.GetCollectorInfoAsync(config.MachineName))
             .ReturnsAsync(collectorInfo1)
@@ -241,24 +256,27 @@ public class MachinePredictionProcessorTests
         MachinePredictionConfig config = CreateValidMachineConfig();
         CollectorInfoDto collectorInfo = CreateCollectorInfoWithSensors(config.InputSensors);
         List<IMeasurementData> measurements = CreateTestMeasurements();
-        var preprocessedData = new Dictionary<string, float[]> 
-        { 
-            ["GlobalActivityRatio"] = [1.0f],
-            ["GlobalChangeDensity"] = [2.0f],
-            ["InterAxisMeanCorrelation"] = [3.0f],
-            ["InterAxisMaxCorrelation"] = [4.0f],
-            ["InterAxisCorrelationVariance"] = [5.0f],
-            ["AxisSynchronization"] = [6.0f],
-            ["AxisLoadBalance"] = [7.0f],
-            ["TemporalStability"] = [8.0f],
-            ["GlobalSkewness"] = [9.0f],
-            ["GlobalKurtosis"] = [10.0f],
-            ["GlobalTrendSlope"] = [11.0f],
-            ["CoefficientOfVariation"] = [12.0f],
-            ["NormalizedIqrMedian"] = [13.0f],
-            ["NormalizedIqrMean"] = [14.0f]
+
+        var now = DateTime.UtcNow;
+        var preprocessedData = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(now, "GlobalActivityRatio", 1.0f),
+            new MeasurementData<float>(now, "GlobalChangeDensity", 2.0f),
+            new MeasurementData<float>(now, "InterAxisMeanCorrelation", 3.0f),
+            new MeasurementData<float>(now, "InterAxisMaxCorrelation", 4.0f),
+            new MeasurementData<float>(now, "InterAxisCorrelationVariance", 5.0f),
+            new MeasurementData<float>(now, "AxisSynchronization", 6.0f),
+            new MeasurementData<float>(now, "AxisLoadBalance", 7.0f),
+            new MeasurementData<float>(now, "TemporalStability", 8.0f),
+            new MeasurementData<float>(now, "GlobalSkewness", 9.0f),
+            new MeasurementData<float>(now, "GlobalKurtosis", 10.0f),
+            new MeasurementData<float>(now, "GlobalTrendSlope", 11.0f),
+            new MeasurementData<float>(now, "CoefficientOfVariation", 12.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMedian", 13.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMean", 14.0f),
         };
-        float[] predictions = new float[] { 0.85f };
+
+        var predictions = new List<IMeasurementData> { new MeasurementData<float>(now, "Prediction", 0.85f) };
 
         _mockRegistrationClient.Setup(x => x.GetCollectorInfoAsync(config.MachineName))
             .ReturnsAsync(collectorInfo);
@@ -302,22 +320,24 @@ public class MachinePredictionProcessorTests
         MachinePredictionConfig config = CreateValidMachineConfig();
         CollectorInfoDto collectorInfo = CreateCollectorInfoWithSensors(config.InputSensors);
         List<IMeasurementData> measurements = CreateTestMeasurements();
-        var preprocessedData = new Dictionary<string, float[]> 
-        { 
-            ["GlobalActivityRatio"] = [1.0f],
-            ["GlobalChangeDensity"] = [2.0f],
-            ["InterAxisMeanCorrelation"] = [3.0f],
-            ["InterAxisMaxCorrelation"] = [4.0f],
-            ["InterAxisCorrelationVariance"] = [5.0f],
-            ["AxisSynchronization"] = [6.0f],
-            ["AxisLoadBalance"] = [7.0f],
-            ["TemporalStability"] = [8.0f],
-            ["GlobalSkewness"] = [9.0f],
-            ["GlobalKurtosis"] = [10.0f],
-            ["GlobalTrendSlope"] = [11.0f],
-            ["CoefficientOfVariation"] = [12.0f],
-            ["NormalizedIqrMedian"] = [13.0f],
-            ["NormalizedIqrMean"] = [14.0f]
+
+        var now = DateTime.UtcNow;
+        var preprocessedData = new List<IMeasurementData>
+        {
+            new MeasurementData<float>(now, "GlobalActivityRatio", 1.0f),
+            new MeasurementData<float>(now, "GlobalChangeDensity", 2.0f),
+            new MeasurementData<float>(now, "InterAxisMeanCorrelation", 3.0f),
+            new MeasurementData<float>(now, "InterAxisMaxCorrelation", 4.0f),
+            new MeasurementData<float>(now, "InterAxisCorrelationVariance", 5.0f),
+            new MeasurementData<float>(now, "AxisSynchronization", 6.0f),
+            new MeasurementData<float>(now, "AxisLoadBalance", 7.0f),
+            new MeasurementData<float>(now, "TemporalStability", 8.0f),
+            new MeasurementData<float>(now, "GlobalSkewness", 9.0f),
+            new MeasurementData<float>(now, "GlobalKurtosis", 10.0f),
+            new MeasurementData<float>(now, "GlobalTrendSlope", 11.0f),
+            new MeasurementData<float>(now, "CoefficientOfVariation", 12.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMedian", 13.0f),
+            new MeasurementData<float>(now, "NormalizedIqrMean", 14.0f),
         };
 
         _mockRegistrationClient.Setup(x => x.GetCollectorInfoAsync(config.MachineName))
@@ -344,7 +364,6 @@ public class MachinePredictionProcessorTests
         MachineName = "test_machine",
         ModelPath = "test_model.onnx",
         InputSensors = ["sensor1", "sensor2"],
-        PredictionSensorName = "prediction_sensor",
         PreprocessingStrategy = "test_strategy",
         WindowSizeSeconds = 300,
         CycleIntervalSeconds = 60,

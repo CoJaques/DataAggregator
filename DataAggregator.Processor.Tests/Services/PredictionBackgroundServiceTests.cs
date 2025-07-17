@@ -174,30 +174,6 @@ public class PredictionBackgroundServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrowInvalidOperationException_WhenPredictionSensorNameIsEmpty()
-    {
-        // Arrange
-        PredictionServiceConfiguration config = CreateValidConfiguration();
-        config.Machines[0].PredictionSensorName = string.Empty;
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _backgroundService.StartAsync(_cancellationTokenSource.Token));
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldThrowInvalidOperationException_WhenPredictionSensorNameIsNull()
-    {
-        // Arrange
-        PredictionServiceConfiguration config = CreateValidConfiguration();
-        config.Machines[0].PredictionSensorName = null!;
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _backgroundService.StartAsync(_cancellationTokenSource.Token));
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ShouldThrowInvalidOperationException_WhenPreprocessingStrategyIsEmpty()
     {
         // Arrange
@@ -297,7 +273,6 @@ public class PredictionBackgroundServiceTests : IDisposable
                     MachineName = "test_machine_1",
                     ModelPath = tempModelPath,
                     InputSensors = ["sensor1", "sensor2"],
-                    PredictionSensorName = "prediction_sensor",
                     PreprocessingStrategy = "ActuatorMergingCurrent",
                     WindowSizeSeconds = 300,
                     CycleIntervalSeconds = 60,
@@ -312,7 +287,6 @@ public class PredictionBackgroundServiceTests : IDisposable
                     MachineName = "test_machine_2",
                     ModelPath = tempModelPath,
                     InputSensors = ["sensor3", "sensor4"],
-                    PredictionSensorName = "prediction_sensor_2",
                     PreprocessingStrategy = "ActuatorMergingCurrent",
                     WindowSizeSeconds = 600,
                     CycleIntervalSeconds = 120,
