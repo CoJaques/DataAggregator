@@ -48,9 +48,14 @@ public class RegistrationService(HttpClient httpClient, string registrationEndpo
             Log.Information("Collector registration result: {IsSuccess}", result.IsSuccess);
             return result;
         }
+        catch (HttpRequestException ex)
+        {
+            Log.Error(ex, "Error registering collector, registration service unavailable");
+            return new DeviceRegistrationResponse(false, string.Empty, string.Empty);
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error registering collector");
+            Log.Error(ex, "Unexpected error during collector registration");
             return new DeviceRegistrationResponse(false, string.Empty, string.Empty);
         }
     }
