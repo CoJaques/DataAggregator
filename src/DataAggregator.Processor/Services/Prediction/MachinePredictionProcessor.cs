@@ -22,7 +22,7 @@ public class MachinePredictionProcessor(
     IDataRepository influxRepository,
     IRegistrationServiceClient registrationClient,
     IOnnxPredictionEngine predictionEngine,
-    IPreprocessingStrategyFactory strategyFactory)
+    IPreprocessingStrategyFactory strategyFactory) : IMachinePredictionProcessor
 {
     #region Private fields
 
@@ -33,11 +33,7 @@ public class MachinePredictionProcessor(
 
     #region Public methods
 
-    /// <summary>
-    /// Processes prediction for a specific machine.
-    /// </summary>
-    /// <param name="config">The machine prediction configuration.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <inheritdoc />
     public async Task ProcessAsync(MachinePredictionConfig config)
     {
         try
