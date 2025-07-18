@@ -31,7 +31,7 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(15, result.Count());
     }
 
     [Fact]
@@ -43,6 +43,7 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Act
         var result = _featureExtractor.PreprocessAsync(measurements, config);
+        result = result.Where(f => f.SensorName != "Label");
 
         // Assert
         Assert.NotNull(result);
@@ -60,6 +61,7 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Act
         var result = _featureExtractor.PreprocessAsync(measurements, config);
+        result = result.Where(f => f.SensorName != "Label");
 
         // Assert
         Assert.NotNull(result);
@@ -76,6 +78,7 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Act
         var result = _featureExtractor.PreprocessAsync(measurements, config);
+        result = result.Where(f => f.SensorName != "Label");
 
         // Assert
         Assert.NotNull(result);
@@ -100,6 +103,7 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Act
         var result = _featureExtractor.PreprocessAsync(measurements, config);
+        result = result.Where(f => f.SensorName != "Label");
 
         // Assert
         Assert.NotNull(result);
@@ -119,6 +123,7 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Act
         var result = _featureExtractor.PreprocessAsync(measurements, config);
+        result = result.Where(f => f.SensorName != "Label");
 
         // Assert
         Assert.NotNull(result);
@@ -149,6 +154,7 @@ public class ActuatorCurrentFeatureExtractorTests
 
         // Act
         var result = _featureExtractor.PreprocessAsync(measurements, config);
+        result = result.Where(f => f.SensorName != "Label");
 
         // Assert
         Assert.NotNull(result);
