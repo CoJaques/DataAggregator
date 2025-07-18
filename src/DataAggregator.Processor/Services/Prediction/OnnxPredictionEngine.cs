@@ -25,34 +25,51 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
     {
         try
         {
+            // Load the model or get the existing session
             InferenceSession session = LoadOrGetModel(modelPath);
+
+            if (!inputData.Any())
+            {
+                Log.Information($"No inputs data provided to model for model {modelPath}");
+                return Array.Empty<IMeasurementData>();
+            }
+
             ValidateInputData(session, inputData);
 
+            // Prepare the inputs for the inference session
             var inputs = new List<NamedOnnxValue>();
-
             foreach (IMeasurementData data in inputData)
             {
                 inputs.Add(CreateNamedOnnxValue(data));
             }
 
+            // Run the model to get results
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
 
+            var inputsNamesAsOutput = session.InputMetadata.Keys
+                .Select(name => name + ".output")
+                .ToList();
+
+            // Filter out results containing input names or the terms "unused" or "__Features__"
+            var filteredResults = results.Where(x =>
+                !inputsNamesAsOutput.Any(input => input.Equals(x.Name, StringComparison.InvariantCultureIgnoreCase)) && // Remove input names
+                !x.Name.Contains("unused", StringComparison.InvariantCultureIgnoreCase) && // Remove "unused" term
+                !x.Name.Contains("__Features__", StringComparison.InvariantCultureIgnoreCase)) // Remove "__Features__" term
+            .ToList();
+
+            // Prepare the list to store output measurements
             var outputMeasurements = new List<IMeasurementData>();
             DateTime now = DateTime.UtcNow;
 
-            foreach (DisposableNamedOnnxValue? result in results)
+            // Process each filtered result to convert it into measurement data
+            foreach (DisposableNamedOnnxValue? result in filteredResults)
             {
-                string name = result.Name;
-                Tensor<float> tensor = result.AsTensor<float>();
-                float[] values = [.. tensor];
-
-                for (int i = 0; i < values.Length; i++)
-                {
-                    outputMeasurements.Add(
-                        new MeasurementData<float>(now, $"{name}_{i}", values[i]));
-                }
+                // Process the result and add it to the output list
+                IEnumerable<IMeasurementData> measurementData = ProcessResultToMeasurementData(result, now);
+                outputMeasurements.AddRange(measurementData);
             }
 
+            // Log the completion of the prediction
             Log.Debug("Prediction completed for model {ModelPath} with {OutputCount} outputs", modelPath, outputMeasurements.Count);
             return await Task.FromResult(outputMeasurements);
         }
@@ -61,6 +78,39 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
             Log.Error(ex, "Error during prediction with model {ModelPath}", modelPath);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Processes the ONNX result into a list of IMeasurementData objects.
+    /// </summary>
+    /// <param name="result">The result from the ONNX model run.</param>
+    /// <param name="timestamp">The timestamp for the measurement data.</param>
+    /// <returns>A list of IMeasurementData containing the processed result.</returns>
+    private List<IMeasurementData> ProcessResultToMeasurementData(DisposableNamedOnnxValue result, DateTime timestamp)
+    {
+        var measurementDataList = new List<IMeasurementData>();
+
+        // Check if the result is of type float (tensor of floats)
+        if (result.AsTensor<float>() != null)
+        {
+            float[] values = [.. result.AsTensor<float>()];
+
+            // Add each float value as MeasurementData
+            measurementDataList.AddRange(values.Select((value, index) =>
+                new MeasurementData<float>(timestamp, $"{result.Name}_{index}", value)));
+        }
+
+        // Check if the result is of type string (tensor of strings)
+        if (result.AsTensor<string>() != null)
+        {
+            string[] values = [.. result.AsTensor<string>()];
+
+            // Add each string value as MeasurementData
+            measurementDataList.AddRange(values.Select((value, index) =>
+                new MeasurementData<string>(timestamp, $"{result.Name}_{index}", value)));
+        }
+
+        return measurementDataList;
     }
 
     /// <summary>
@@ -112,13 +162,13 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
     {
         IReadOnlyDictionary<string, NodeMetadata> modelInputs = session.InputMetadata;
 
-        // Check if all required model inputs are provided
-        foreach (KeyValuePair<string, NodeMetadata> modelInput in modelInputs)
+        // Check if all inputData sensors exist in the model inputs
+        foreach (IMeasurementData input in inputData)
         {
-            if (!inputData.Any(x => modelInput.Key == x.SensorName))
+            if (!modelInputs.ContainsKey(input.SensorName))
             {
                 throw new ArgumentException(
-                    $"Model requires input '{modelInput.Key}' but it was not provided. ");
+                    $"Model does not have an input for '{input.SensorName}' which was provided in input data.");
             }
         }
 
@@ -140,6 +190,9 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
 
             double[] dArray => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<double>(dArray, [1, dArray.Length])),
             double d => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<double>(new[] { d }, [1, 1])),
+
+            string[] sArray => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<string>(sArray, [1, sArray.Length])),
+            string s => NamedOnnxValue.CreateFromTensor(name, new DenseTensor<string>(new[] { s }, [1, 1])),
 
             _ => throw new NotSupportedException($"Unsupported data type {data.ValueType} for sensor {name}"),
         };
