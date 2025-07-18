@@ -48,6 +48,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
             new MeasurementData<float>(now, "CoefficientOfVariation", normalizedFeatures[11]),
             new MeasurementData<float>(now, "NormalizedIqrMedian", normalizedFeatures[12]),
             new MeasurementData<float>(now, "NormalizedIqrMean", normalizedFeatures[13]),
+            new MeasurementData<string>(now, "Label", string.Empty),
         };
 
         Log.Debug("Preprocessing completed for machine {MachineName}", config.MachineName);
