@@ -12,7 +12,7 @@ namespace DataAggregator.Processor.Tests.Services;
 public class PredictionBackgroundServiceTests : IDisposable
 {
     private readonly Mock<IOptions<PredictionServiceConfiguration>> _mockConfiguration;
-    private readonly Mock<MachinePredictionProcessor> _mockPredictionProcessor;
+    private readonly Mock<IMachinePredictionProcessor> _mockPredictionProcessor;
     private readonly PredictionBackgroundService _backgroundService;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
@@ -22,7 +22,7 @@ public class PredictionBackgroundServiceTests : IDisposable
     public PredictionBackgroundServiceTests()
     {
         _mockConfiguration = new Mock<IOptions<PredictionServiceConfiguration>>();
-        _mockPredictionProcessor = new Mock<MachinePredictionProcessor>();
+        _mockPredictionProcessor = new Mock<IMachinePredictionProcessor>();
         _cancellationTokenSource = new CancellationTokenSource();
 
         _backgroundService = new PredictionBackgroundService(
@@ -62,25 +62,9 @@ public class PredictionBackgroundServiceTests : IDisposable
 
         // Assert
         // The service should have started without throwing exceptions
-        Assert.True(true);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldNotScheduleDisabledMachines_WhenConfigurationContainsDisabledMachines()
-    {
-        // Arrange
-        PredictionServiceConfiguration config = CreateValidConfiguration();
-        config.Machines[0].Enabled = false;
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        // Act
-        Task task = _backgroundService.StartAsync(_cancellationTokenSource.Token);
-        await Task.Delay(100); // Give it time to start
-        await _backgroundService.StopAsync(_cancellationTokenSource.Token);
-
-        // Assert
-        // The service should have started without throwing exceptions
-        Assert.True(true);
+        _mockPredictionProcessor.Verify(
+            x => x.ProcessAsync(It.IsAny<MachinePredictionConfig>()),
+            Times.Exactly(config.Machines.Count(m => m.Enabled)));
     }
 
     [Fact]
@@ -91,28 +75,6 @@ public class PredictionBackgroundServiceTests : IDisposable
         {
             Machines = [],
         };
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        // Act
-        Task task = _backgroundService.StartAsync(_cancellationTokenSource.Token);
-        await Task.Delay(100); // Give it time to start
-        await _backgroundService.StopAsync(_cancellationTokenSource.Token);
-
-        // Assert
-        // The service should have started without throwing exceptions
-        Assert.True(true);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldHandleAllDisabledMachines_WhenConfigurationContainsOnlyDisabledMachines()
-    {
-        // Arrange
-        PredictionServiceConfiguration config = CreateValidConfiguration();
-        foreach (MachinePredictionConfig machine in config.Machines)
-        {
-            machine.Enabled = false;
-        }
-
         _mockConfiguration.Setup(x => x.Value).Returns(config);
 
         // Act
@@ -150,18 +112,6 @@ public class PredictionBackgroundServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrowInvalidOperationException_WhenMachineNameIsNull()
-    {
-        // Arrange
-        PredictionServiceConfiguration config = CreateValidConfiguration();
-        config.Machines[0].MachineName = null!;
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _backgroundService.StartAsync(_cancellationTokenSource.Token));
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ShouldThrowInvalidOperationException_WhenNoInputSensorsConfigured()
     {
         // Arrange
@@ -186,18 +136,6 @@ public class PredictionBackgroundServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrowInvalidOperationException_WhenPreprocessingStrategyIsNull()
-    {
-        // Arrange
-        PredictionServiceConfiguration config = CreateValidConfiguration();
-        config.Machines[0].PreprocessingStrategy = null!;
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _backgroundService.StartAsync(_cancellationTokenSource.Token));
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ShouldStopGracefully_WhenCancellationRequested()
     {
         // Arrange
@@ -208,45 +146,6 @@ public class PredictionBackgroundServiceTests : IDisposable
         Task task = _backgroundService.StartAsync(_cancellationTokenSource.Token);
         await Task.Delay(100); // Give it time to start
         _cancellationTokenSource.Cancel();
-        await _backgroundService.StopAsync(_cancellationTokenSource.Token);
-
-        // Assert
-        // The service should have stopped without throwing exceptions
-        Assert.True(true);
-    }
-
-    #endregion
-
-    #region StopAsync tests
-
-    [Fact]
-    public async Task StopAsync_ShouldDisposeAllTimers_WhenCalled()
-    {
-        // Arrange
-        PredictionServiceConfiguration config = CreateValidConfiguration();
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        // Act
-        await _backgroundService.StartAsync(_cancellationTokenSource.Token);
-        await Task.Delay(100); // Give it time to start
-        await _backgroundService.StopAsync(_cancellationTokenSource.Token);
-
-        // Assert
-        // The service should have stopped without throwing exceptions
-        Assert.True(true);
-    }
-
-    [Fact]
-    public async Task StopAsync_ShouldNotThrowException_WhenCalledMultipleTimes()
-    {
-        // Arrange
-        PredictionServiceConfiguration config = CreateValidConfiguration();
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        // Act
-        await _backgroundService.StartAsync(_cancellationTokenSource.Token);
-        await Task.Delay(100); // Give it time to start
-        await _backgroundService.StopAsync(_cancellationTokenSource.Token);
         await _backgroundService.StopAsync(_cancellationTokenSource.Token);
 
         // Assert

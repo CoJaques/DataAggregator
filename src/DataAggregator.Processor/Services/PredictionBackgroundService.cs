@@ -15,7 +15,7 @@ namespace DataAggregator.Processor.Services;
 /// <param name="predictionProcessor">The machine prediction processor.</param>
 public class PredictionBackgroundService(
     IOptions<PredictionServiceConfiguration> configuration,
-    MachinePredictionProcessor predictionProcessor) : BackgroundService
+    IMachinePredictionProcessor predictionProcessor) : BackgroundService
 {
     #region Private fields
 
