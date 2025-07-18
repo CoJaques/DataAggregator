@@ -42,7 +42,7 @@ builder.Services.AddScoped<IDataRepository, InfluxV3Repository>();
 builder.Services.AddScoped<IRegistrationServiceClient, RegistrationServiceClient>();
 builder.Services.AddScoped<IOnnxPredictionEngine, OnnxPredictionEngine>();
 builder.Services.AddScoped<IPreprocessingStrategyFactory, PreprocessingStrategyFactory>();
-builder.Services.AddScoped<MachinePredictionProcessor>();
+builder.Services.AddScoped<IMachinePredictionProcessor, MachinePredictionProcessor>();
 
 // Register background service
 builder.Services.AddHostedService<PredictionBackgroundService>();
