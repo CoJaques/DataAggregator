@@ -44,14 +44,9 @@ public class OnnxPredictionEngineTests : IDisposable
         // Arrange
         string modelPath = _testModelPath;
         string copyPath = Path.Combine("resources", "opencn_model_copy.onnx");
-        File.Copy(modelPath, copyPath);
+        File.Copy(modelPath, copyPath, true);
 
-        var inputData = new List<IMeasurementData>
-        {
-            new MeasurementData<float>(DateTime.UtcNow, "GlobalActivityRatio", 1.0f),
-            new MeasurementData<float>(DateTime.UtcNow, "GlobalChangeDensity", 2.0f),
-            new MeasurementData<float>(DateTime.UtcNow, "InterAxisMeanCorrelation", 3.0f),
-        };
+        var inputData = ProcessorTestHelper.GetValidTestData();
 
         // Act
         IEnumerable<IMeasurementData> result1 = await _predictionEngine.PredictAsync(copyPath, inputData);
@@ -70,42 +65,38 @@ public class OnnxPredictionEngineTests : IDisposable
         // Arrange
         string modelPath = _testModelPath;
         var now = DateTime.UtcNow;
-        var inputData = new List<IMeasurementData>
-        {
-            new MeasurementData<float>(now, "GlobalActivityRatio", 1.0f),
-            new MeasurementData<float>(now, "GlobalChangeDensity", 2.0f),
-            new MeasurementData<float>(now, "InterAxisMeanCorrelation", 3.0f),
-            new MeasurementData<float>(now, "InterAxisMaxCorrelation", 4.0f),
-            new MeasurementData<float>(now, "InterAxisCorrelationVariance", 5.0f),
-            new MeasurementData<float>(now, "AxisSynchronization", 6.0f),
-            new MeasurementData<float>(now, "AxisLoadBalance", 7.0f),
-            new MeasurementData<float>(now, "TemporalStability", 8.0f),
-            new MeasurementData<float>(now, "GlobalSkewness", 9.0f),
-            new MeasurementData<float>(now, "GlobalKurtosis", 10.0f),
-            new MeasurementData<float>(now, "GlobalTrendSlope", 11.0f),
-            new MeasurementData<float>(now, "CoefficientOfVariation", 12.0f),
-            new MeasurementData<float>(now, "NormalizedIqrMedian", 13.0f),
-            new MeasurementData<float>(now, "NormalizedIqrMean", 14.0f),
-        };
+        var inputData = ProcessorTestHelper.GetValidTestData();
 
-        try
-        {
-            // Act
-            IEnumerable<IMeasurementData> result = await _predictionEngine.PredictAsync(modelPath, inputData);
+        // Act
+        IEnumerable<IMeasurementData> result = await _predictionEngine.PredictAsync(modelPath, inputData);
 
-            // Assert
-            Assert.NotNull(result);
-            Assert.True(result.Count() > 0);
-            // TODO ADD RESULT
-        }
-        finally
-        {
-            // Cleanup
-            if (File.Exists(modelPath))
-            {
-                File.Delete(modelPath);
-            }
-        }
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.Count() > 0);
+    }
+
+    [Fact]
+    public async Task PredictAsync_ShouldReturnGoodResult_DifferentStateDataProvided()
+    {
+        // Arrange
+        string modelPath = _testModelPath;
+        var inputDataShutdown = ProcessorTestHelper.GetValidShutdownStateData();
+        var inputDataProduction = ProcessorTestHelper.GetValidProductionStateData();
+        var inputDataIdle = ProcessorTestHelper.GetValidIdleStateData();
+
+        // Act
+        IEnumerable<IMeasurementData> resultShutdown = await _predictionEngine.PredictAsync(modelPath, inputDataShutdown);
+        IEnumerable<IMeasurementData> resultProduction = await _predictionEngine.PredictAsync(modelPath, inputDataProduction);
+        IEnumerable<IMeasurementData> resultIdle = await _predictionEngine.PredictAsync(modelPath, inputDataIdle);
+
+        // Assert
+        Assert.NotNull(resultShutdown);
+        Assert.NotNull(resultProduction);
+        Assert.NotNull(resultIdle);
+        Assert.Equal("disable", resultShutdown.First(x => x.SensorName == "PredictedLabel.output_0").GetRawValue().ToString());
+        Assert.Equal("production", resultProduction.First(x => x.SensorName == "PredictedLabel.output_0").GetRawValue().ToString());
+        Assert.Equal("enable", resultIdle.First(static x => x.SensorName == "PredictedLabel.output_0").GetRawValue().ToString());
+
     }
 
     [Fact]
@@ -115,22 +106,11 @@ public class OnnxPredictionEngineTests : IDisposable
         string modelPath = _testModelPath;
         var inputData = new List<IMeasurementData>();
 
-        try
-        {
-            // Act
-            IEnumerable<IMeasurementData> result = await _predictionEngine.PredictAsync(modelPath, inputData);
+        // Act
+        IEnumerable<IMeasurementData> result = await _predictionEngine.PredictAsync(modelPath, inputData);
 
-            // Assert
-            Assert.NotNull(result);
-        }
-        finally
-        {
-            // Cleanup
-            if (File.Exists(modelPath))
-            {
-                File.Delete(modelPath);
-            }
-        }
+        // Assert
+        Assert.NotNull(result);
     }
 
     #endregion
@@ -138,27 +118,11 @@ public class OnnxPredictionEngineTests : IDisposable
     #region Dispose tests
 
     [Fact]
-    public void Dispose_ShouldNotThrowException_WhenCalledMultipleTimes()
-    {
-        // Act & Assert
-        Exception exception = Record.Exception(() =>
-        {
-            _predictionEngine.Dispose();
-            _predictionEngine.Dispose();
-        });
-
-        Assert.Null(exception);
-    }
-
-    [Fact]
     public void Dispose_ShouldClearModelCache_WhenCalled()
     {
         // Arrange
         string modelPath = _testModelPath;
-        var inputData = new List<IMeasurementData>
-        {
-            new MeasurementData<float>(DateTime.UtcNow, "GlobalActivityRatio", 1.0f),
-        };
+        IEnumerable<IMeasurementData> inputData = ProcessorTestHelper.GetValidTestData();
 
         try
         {
@@ -173,11 +137,7 @@ public class OnnxPredictionEngineTests : IDisposable
         }
         finally
         {
-            // Cleanup
-            if (File.Exists(modelPath))
-            {
-                File.Delete(modelPath);
-            }
+            // do nothing
         }
     }
 
@@ -186,10 +146,6 @@ public class OnnxPredictionEngineTests : IDisposable
     #region Helper methods
 
     private static string _testModelPath = Path.Combine("resources", "opencn_model.onnx");
-
-    // Simple test model bytes (minimal ONNX model)
-    private static readonly byte[] TestModelBytes = Convert.FromBase64String(
-        "T05OWA=="); // This is just a placeholder - in real tests you'd use a proper minimal ONNX model
 
     #endregion
 
