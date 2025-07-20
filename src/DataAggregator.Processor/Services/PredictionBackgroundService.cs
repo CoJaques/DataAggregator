@@ -12,15 +12,15 @@ namespace DataAggregator.Processor.Services;
 /// Initializes a new instance of the <see cref="PredictionBackgroundService"/> class.
 /// </remarks>
 /// <param name="configuration">The prediction service configuration.</param>
-/// <param name="predictionProcessor">The machine prediction processor.</param>
+/// <param name="serviceProvider">The service provider.</param>
 public class PredictionBackgroundService(
     IOptions<PredictionServiceConfiguration> configuration,
-    IMachinePredictionProcessor predictionProcessor) : BackgroundService
+    IServiceProvider serviceProvider) : BackgroundService
 {
     #region Private fields
 
     private readonly Dictionary<string, Timer> _machineTimers = [];
-    private readonly Dictionary<string, bool> _machineErrors = [];
+    private readonly Dictionary<string, SemaphoreSlim> _machineLocks = [];
 
     #endregion
 
@@ -97,7 +97,8 @@ public class PredictionBackgroundService(
             try
             {
                 // Check if ONNX model file exists
-                if (!File.Exists(machineConfig.ModelPath))
+                string fullPath = Path.Combine(AppContext.BaseDirectory, machineConfig.ModelPath);
+                if (!File.Exists(fullPath))
                 {
                     Log.Error(
                         "ONNX model file not found for machine {MachineName}: {ModelPath}",
@@ -151,10 +152,18 @@ public class PredictionBackgroundService(
         {
             var interval = TimeSpan.FromSeconds(machineConfig.CycleIntervalSeconds);
 
-            var timer = new Timer(async _ => await ProcessMachineAsync(machineConfig), null, TimeSpan.Zero, interval);
+            if (!_machineLocks.ContainsKey(machineConfig.MachineName))
+            {
+                _machineLocks[machineConfig.MachineName] = new SemaphoreSlim(1, 1);
+            }
+
+            using IServiceScope scope = serviceProvider.CreateScope();
+            IMachinePredictionProcessor predictionProcessor
+                = scope.ServiceProvider.GetRequiredService<IMachinePredictionProcessor>();
+
+            var timer = new Timer(async _ => await ProcessMachineAsync(machineConfig, predictionProcessor), null, TimeSpan.Zero, interval);
 
             _machineTimers[machineConfig.MachineName] = timer;
-            _machineErrors[machineConfig.MachineName] = false;
 
             Log.Information(
                 "Scheduled prediction processing for machine {MachineName} with interval {Interval}",
@@ -168,31 +177,27 @@ public class PredictionBackgroundService(
         }
     }
 
-    private async Task ProcessMachineAsync(MachinePredictionConfig machineConfig)
+    private async Task ProcessMachineAsync(MachinePredictionConfig machineConfig, IMachinePredictionProcessor predictionProcessor)
     {
-        // Skip if machine has errors
-        if (_machineErrors.TryGetValue(machineConfig.MachineName, out bool hasError) && hasError)
+        SemaphoreSlim machineLock = _machineLocks[machineConfig.MachineName];
+
+        if (!await machineLock.WaitAsync(0))
         {
-            Log.Debug("Skipping prediction for machine {MachineName} due to previous errors", machineConfig.MachineName);
+            Log.Warning("Prediction already running for machine {MachineName}, skipping this cycle", machineConfig.MachineName);
             return;
         }
 
         try
         {
             await predictionProcessor.ProcessAsync(machineConfig);
-
-            // Clear error flag if processing succeeds
-            if (_machineErrors.ContainsKey(machineConfig.MachineName))
-            {
-                _machineErrors[machineConfig.MachineName] = false;
-            }
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Error processing prediction for machine {MachineName}", machineConfig.MachineName);
-
-            // Set error flag to stop processing for this machine
-            _machineErrors[machineConfig.MachineName] = true;
+        }
+        finally
+        {
+            machineLock.Release();
         }
     }
 

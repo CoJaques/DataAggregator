@@ -52,13 +52,14 @@ public class InfluxV3Repository : IDataRepository, IDisposable
 
         try
         {
-            // Build the Flux query - no pivot needed since we want the original structure
-            string sensorFilter = string.Join(" or ", sensors.Select(s => $"r[\"_field\"] == \"{s.SensorName}\""));
-            string query = $@"
-                from(bucket: ""{_database}"")
-                |> range(start: {startTime:yyyy-MM-ddTHH:mm:ssZ}, stop: {endTime:yyyy-MM-ddTHH:mm:ssZ})
-                |> filter(fn: (r) => r[""_measurement""] == ""{table}"")
-                |> filter(fn: (r) => {sensorFilter})";
+            string sensorColumns = string.Join(", ", sensors.Select(s => $"\"{s.SensorName}\""));
+
+            string query = $"""
+            SELECT time, {sensorColumns}
+            FROM "{table}"
+            WHERE time >= '{startTime:yyyy-MM-ddTHH:mm:ssZ}'
+              AND time < '{endTime:yyyy-MM-ddTHH:mm:ssZ}'
+        """;
 
             var measurements = new List<IMeasurementData>();
             var sensorDict = sensors.ToDictionary(s => s.SensorName, s => s);
