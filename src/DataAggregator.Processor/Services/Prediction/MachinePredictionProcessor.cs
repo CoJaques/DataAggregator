@@ -104,7 +104,8 @@ public class MachinePredictionProcessor(
             }
 
             // Perform prediction
-            IEnumerable<IMeasurementData> predictions = await predictionEngine.PredictAsync(config.ModelPath, preprocessedData);
+            string fullPath = Path.Combine(AppContext.BaseDirectory, config.ModelPath);
+            IEnumerable<IMeasurementData> predictions = await predictionEngine.PredictAsync(fullPath, preprocessedData);
 
             if (predictions == null || !predictions.Any())
             {

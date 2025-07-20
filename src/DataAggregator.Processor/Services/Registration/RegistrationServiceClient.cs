@@ -23,7 +23,7 @@ public class RegistrationServiceClient(HttpClient httpClient) : IRegistrationSer
 
         try
         {
-            HttpResponseMessage response = await httpClient.GetAsync($"/api/DeviceRegistration/collector/{deviceName}");
+            HttpResponseMessage response = await httpClient.GetAsync($"api/DeviceRegistration/{deviceName}");
 
             if (response.IsSuccessStatusCode)
             {

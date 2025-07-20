@@ -22,26 +22,24 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator Processor API", Version = "v1" }));
 
-// Configure HTTP clients
-builder.Services.AddHttpClient();
-builder.Services.AddHttpClient("RegistrationClient", client =>
-{
-    string registrationEndpoint = builder.Configuration["RegistrationService:Endpoint"] ?? "http://localhost:5001";
-    client.BaseAddress = new Uri(registrationEndpoint);
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
-
 // Register health checks
 builder.Services.AddHealthChecks();
 
 // Configure prediction service
 builder.Services.Configure<PredictionServiceConfiguration>(builder.Configuration.GetSection("PredictionService"));
 
+// Configure HTTP clients
+builder.Services.AddHttpClient<IRegistrationServiceClient, RegistrationServiceClient>("RegistrationClient", client =>
+{
+    string registrationEndpoint = builder.Configuration["PredictionService:RegistrationServiceUrl"] ?? "http://localhost:5001";
+    client.BaseAddress = new Uri(registrationEndpoint);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
 // Register services
 builder.Services.AddScoped<IDataRepository, InfluxV3Repository>();
-builder.Services.AddScoped<IRegistrationServiceClient, RegistrationServiceClient>();
-builder.Services.AddScoped<IOnnxPredictionEngine, OnnxPredictionEngine>();
-builder.Services.AddScoped<IPreprocessingStrategyFactory, PreprocessingStrategyFactory>();
+builder.Services.AddSingleton<IOnnxPredictionEngine, OnnxPredictionEngine>();
+builder.Services.AddSingleton<IPreprocessingStrategyFactory, PreprocessingStrategyFactory>();
 builder.Services.AddScoped<IMachinePredictionProcessor, MachinePredictionProcessor>();
 
 // Register background service
