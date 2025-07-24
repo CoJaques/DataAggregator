@@ -20,11 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Xunit" />
+    <ProjectReference Include="..\..\src\DataAggregator.Processor\DataAggregator.Processor.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\DataAggregator.Processor\DataAggregator.Processor.csproj" />
+    <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>

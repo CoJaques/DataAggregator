@@ -1,6 +1,7 @@
 using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services;
 using DataAggregator.Processor.Services.Prediction;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -13,21 +14,41 @@ public class PredictionBackgroundServiceTests : IDisposable
 {
     private readonly Mock<IOptions<PredictionServiceConfiguration>> _mockConfiguration;
     private readonly Mock<IMachinePredictionProcessor> _mockPredictionProcessor;
-    private readonly PredictionBackgroundService _backgroundService;
+    private readonly Mock<IServiceProvider> _serviceProvider;
+    private readonly Mock<IServiceScope> _mockScope;
+    private readonly Mock<IServiceScopeFactory> _mockScopeFactory;
     private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly PredictionBackgroundService _backgroundService;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PredictionBackgroundServiceTests"/> class.
-    /// </summary>
     public PredictionBackgroundServiceTests()
     {
         _mockConfiguration = new Mock<IOptions<PredictionServiceConfiguration>>();
         _mockPredictionProcessor = new Mock<IMachinePredictionProcessor>();
         _cancellationTokenSource = new CancellationTokenSource();
 
+        _serviceProvider = new Mock<IServiceProvider>();
+        _mockScope = new Mock<IServiceScope>();
+        _mockScopeFactory = new Mock<IServiceScopeFactory>();
+
+        _serviceProvider
+            .Setup(x => x.GetService(typeof(IMachinePredictionProcessor)))
+            .Returns(_mockPredictionProcessor.Object);
+
+        _serviceProvider
+            .Setup(x => x.GetService(typeof(IServiceScopeFactory)))
+            .Returns(_mockScopeFactory.Object);
+
+        _mockScope
+            .Setup(x => x.ServiceProvider)
+            .Returns(_serviceProvider.Object);
+
+        _mockScopeFactory
+            .Setup(x => x.CreateScope())
+            .Returns(_mockScope.Object);
+
         _backgroundService = new PredictionBackgroundService(
             _mockConfiguration.Object,
-            _mockPredictionProcessor.Object);
+            _serviceProvider.Object);
     }
 
     #region ExecuteAsync tests
