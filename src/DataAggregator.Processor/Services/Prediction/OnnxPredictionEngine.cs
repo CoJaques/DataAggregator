@@ -59,13 +59,13 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
 
             // Prepare the list to store output measurements
             var outputMeasurements = new List<IMeasurementData>();
-            DateTime now = DateTime.UtcNow;
+            DateTime processedDataTime = inputData.First().TimeStamp;
 
             // Process each filtered result to convert it into measurement data
             foreach (DisposableNamedOnnxValue? result in filteredResults)
             {
                 // Process the result and add it to the output list
-                IEnumerable<IMeasurementData> measurementData = ProcessResultToMeasurementData(result, now);
+                IEnumerable<IMeasurementData> measurementData = ProcessResultToMeasurementData(result, processedDataTime);
                 outputMeasurements.AddRange(measurementData);
             }
 
