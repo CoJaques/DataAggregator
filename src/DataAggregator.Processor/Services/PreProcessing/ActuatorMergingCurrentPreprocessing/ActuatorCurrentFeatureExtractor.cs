@@ -31,24 +31,30 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         // Apply Z-score normalization if enabled
         float[] normalizedFeatures = NormalizeFeaturesAsync(features, config.Preprocessing);
 
-        DateTime now = DateTime.UtcNow;
+        DateTime meanTime;
+
+        if (measurements.Count() != 0)
+            meanTime = measurements.ElementAt(measurements.Count() / 2).TimeStamp;
+        else
+            meanTime = DateTime.UtcNow;
+
         var result = new List<IMeasurementData>
         {
-            new MeasurementData<float>(now, "GlobalActivityRatio", normalizedFeatures[0]),
-            new MeasurementData<float>(now, "GlobalChangeDensity", normalizedFeatures[1]),
-            new MeasurementData<float>(now, "InterAxisMeanCorrelation", normalizedFeatures[2]),
-            new MeasurementData<float>(now, "InterAxisMaxCorrelation", normalizedFeatures[3]),
-            new MeasurementData<float>(now, "InterAxisCorrelationVariance", normalizedFeatures[4]),
-            new MeasurementData<float>(now, "AxisSynchronization", normalizedFeatures[5]),
-            new MeasurementData<float>(now, "AxisLoadBalance", normalizedFeatures[6]),
-            new MeasurementData<float>(now, "TemporalStability", normalizedFeatures[7]),
-            new MeasurementData<float>(now, "GlobalSkewness", normalizedFeatures[8]),
-            new MeasurementData<float>(now, "GlobalKurtosis", normalizedFeatures[9]),
-            new MeasurementData<float>(now, "GlobalTrendSlope", normalizedFeatures[10]),
-            new MeasurementData<float>(now, "CoefficientOfVariation", normalizedFeatures[11]),
-            new MeasurementData<float>(now, "NormalizedIqrMedian", normalizedFeatures[12]),
-            new MeasurementData<float>(now, "NormalizedIqrMean", normalizedFeatures[13]),
-            new MeasurementData<string>(now, "Label", string.Empty),
+            new MeasurementData<float>(meanTime, "GlobalActivityRatio", normalizedFeatures[0]),
+            new MeasurementData<float>(meanTime, "GlobalChangeDensity", normalizedFeatures[1]),
+            new MeasurementData<float>(meanTime, "InterAxisMeanCorrelation", normalizedFeatures[2]),
+            new MeasurementData<float>(meanTime, "InterAxisMaxCorrelation", normalizedFeatures[3]),
+            new MeasurementData<float>(meanTime, "InterAxisCorrelationVariance", normalizedFeatures[4]),
+            new MeasurementData<float>(meanTime, "AxisSynchronization", normalizedFeatures[5]),
+            new MeasurementData<float>(meanTime, "AxisLoadBalance", normalizedFeatures[6]),
+            new MeasurementData<float>(meanTime, "TemporalStability", normalizedFeatures[7]),
+            new MeasurementData<float>(meanTime, "GlobalSkewness", normalizedFeatures[8]),
+            new MeasurementData<float>(meanTime, "GlobalKurtosis", normalizedFeatures[9]),
+            new MeasurementData<float>(meanTime, "GlobalTrendSlope", normalizedFeatures[10]),
+            new MeasurementData<float>(meanTime, "CoefficientOfVariation", normalizedFeatures[11]),
+            new MeasurementData<float>(meanTime, "NormalizedIqrMedian", normalizedFeatures[12]),
+            new MeasurementData<float>(meanTime, "NormalizedIqrMean", normalizedFeatures[13]),
+            new MeasurementData<string>(meanTime, "Label", string.Empty),
         };
 
         Log.Debug("Preprocessing completed for machine {MachineName}", config.MachineName);
