@@ -13,8 +13,7 @@ public interface IDataRepository
     /// </summary>
     /// <param name="endpoint">The InfluxDB endpoint.</param>
     /// <param name="token">The authentication token.</param>
-    /// <param name="org">The organization name.</param>
-    public void InitializeAsync(string endpoint, string token, string org);
+    public void InitializeAsync(string endpoint, string token);
 
     /// <summary>
     /// Queries measurements from InfluxDB for a specific time range and sensors with type information.
@@ -29,8 +28,8 @@ public interface IDataRepository
     /// <summary>
     /// Writes a single measurement to InfluxDB.
     /// </summary>
-    /// <param name="table">The table name (machine name).</param>
+    /// <param name="tag">The tag name (machine name).</param>
     /// <param name="measurement">The measurement data to write.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task WriteMeasurementAsync(string table, IEnumerable<IMeasurementData> measurement);
+    public Task WriteMeasurementAsync(string tag, IEnumerable<IMeasurementData> measurement);
 }

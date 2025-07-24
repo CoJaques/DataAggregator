@@ -73,8 +73,7 @@ public class MachinePredictionProcessor(
             {
                 influxRepository.InitializeAsync(
                     collectorInfo.AssignedInfluxEndpoint.Endpoint,
-                    collectorInfo.AssignedInfluxEndpoint.Token,
-                    "Dataggregator");
+                    collectorInfo.AssignedInfluxEndpoint.Token);
 
                 _lastEndpoint = collectorInfo.AssignedInfluxEndpoint.Endpoint;
                 Log.Debug("Reinitialized InfluxDB connection with new endpoint: {Endpoint}", _lastEndpoint);

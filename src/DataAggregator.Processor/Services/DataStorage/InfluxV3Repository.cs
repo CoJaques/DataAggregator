@@ -1,4 +1,5 @@
 using DataAggregator.Collector.Shared.Models;
+using DataAggregator.Shared.Configuration.TimeSeries;
 using DataAggregator.Shared.Domain.DataType;
 using DataAggregator.Shared.DTOs;
 using InfluxDB3.Client;
@@ -13,11 +14,10 @@ namespace DataAggregator.Processor.Services.DataStorage;
 /// </summary>
 public class InfluxV3Repository : IDataRepository, IDisposable
 {
-    private readonly string _database = "Dataggregator";
     private InfluxDBClient? _client;
 
     /// <inheritdoc/>
-    public void InitializeAsync(string endpoint, string token, string org)
+    public void InitializeAsync(string endpoint, string token)
     {
         _client?.Dispose();
 
@@ -27,8 +27,8 @@ public class InfluxV3Repository : IDataRepository, IDisposable
             {
                 Token = token,
                 Host = endpoint,
-                Organization = org,
-                Database = _database,
+                Organization = InfluxHelper.DatabaseName,
+                Database = InfluxHelper.DatabaseName,
             };
 
             _client = new InfluxDBClient(clientConfig);
@@ -59,7 +59,7 @@ public class InfluxV3Repository : IDataRepository, IDisposable
             FROM "{table}"
             WHERE time >= '{startTime:yyyy-MM-ddTHH:mm:ssZ}'
               AND time < '{endTime:yyyy-MM-ddTHH:mm:ssZ}'
-        """;
+            """;
 
             var measurements = new List<IMeasurementData>();
             var sensorDict = sensors.ToDictionary(s => s.SensorName, s => s);
@@ -137,7 +137,7 @@ public class InfluxV3Repository : IDataRepository, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task WriteMeasurementAsync(string table, IEnumerable<IMeasurementData> measurements)
+    public async Task WriteMeasurementAsync(string tag, IEnumerable<IMeasurementData> measurements)
     {
         if (_client == null)
         {
@@ -155,9 +155,10 @@ public class InfluxV3Repository : IDataRepository, IDisposable
                         m => m.GetRawValue());
 
                     return PointData
-                        .Measurement(table)
+                        .Measurement(InfluxHelper.PredictionTableName)
                         .SetTimestamp(DateTime.SpecifyKind(group.Key, DateTimeKind.Utc))
-                        .SetFields(fields);
+                        .SetFields(fields)
+                        .SetTag(InfluxHelper.MachineNameTag, tag);
                 });
 
             await _client.WritePointsAsync(groupedPoints, null, WritePrecision.Ms);
@@ -166,7 +167,7 @@ public class InfluxV3Repository : IDataRepository, IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to write measurement to InfluxDB for table {Table}", table);
+            Log.Error(ex, "Failed to write measurement to InfluxDB for table {Table}", tag);
             throw;
         }
     }

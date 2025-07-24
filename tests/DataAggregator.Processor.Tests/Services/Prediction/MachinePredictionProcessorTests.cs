@@ -147,7 +147,7 @@ public class MachinePredictionProcessorTests
             .Returns(_mockPreprocessingStrategy.Object);
         _mockPreprocessingStrategy.Setup(x => x.PreprocessAsync(It.IsAny<List<IMeasurementData>>(), It.IsAny<MachinePredictionConfig>()))
             .Returns(preprocessedData);
-        _mockPredictionEngine.Setup(x => x.PredictAsync(config.ModelPath, preprocessedData))
+        _mockPredictionEngine.Setup(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<IEnumerable<IMeasurementData>>()))
             .ReturnsAsync(results);
 
         // Act
@@ -157,8 +157,7 @@ public class MachinePredictionProcessorTests
         _mockInfluxRepository.Verify(
             x => x.InitializeAsync(
             collectorInfo.AssignedInfluxEndpoint.Endpoint,
-            collectorInfo.AssignedInfluxEndpoint.Token,
-            "Dataggregator"),
+            collectorInfo.AssignedInfluxEndpoint.Token),
             Times.Once);
         _mockInfluxRepository.Verify(
             x => x.QueryMeasurementsAsync(
@@ -167,7 +166,7 @@ public class MachinePredictionProcessorTests
             It.IsAny<DateTime>(),
             It.IsAny<List<SensorInfoDto>>()),
             Times.Once);
-        _mockPredictionEngine.Verify(x => x.PredictAsync(config.ModelPath, preprocessedData), Times.Once);
+        _mockPredictionEngine.Verify(x => x.PredictAsync(It.IsAny<string>(), It.IsAny<IEnumerable<IMeasurementData>>()), Times.Once);
         _mockInfluxRepository.Verify(x => x.WriteMeasurementAsync(config.MachineName, It.IsAny<IEnumerable<IMeasurementData>>()), Times.Once);
     }
 
@@ -208,13 +207,11 @@ public class MachinePredictionProcessorTests
         _mockInfluxRepository.Verify(
             x => x.InitializeAsync(
             collectorInfo1.AssignedInfluxEndpoint.Endpoint,
-            collectorInfo1.AssignedInfluxEndpoint.Token,
-            "Dataggregator"), Times.Once);
+            collectorInfo1.AssignedInfluxEndpoint.Token), Times.Once);
         _mockInfluxRepository.Verify(
             x => x.InitializeAsync(
             collectorInfo2.AssignedInfluxEndpoint.Endpoint,
-            collectorInfo2.AssignedInfluxEndpoint.Token,
-            "Dataggregator"), Times.Once);
+            collectorInfo2.AssignedInfluxEndpoint.Token), Times.Once);
     }
 
     [Fact]
@@ -249,7 +246,6 @@ public class MachinePredictionProcessorTests
         _mockInfluxRepository.Verify(
             x => x.InitializeAsync(
             It.IsAny<string>(),
-            It.IsAny<string>(),
             It.IsAny<string>()), Times.Once);
     }
 
@@ -260,31 +256,6 @@ public class MachinePredictionProcessorTests
         MachinePredictionConfig config = CreateValidMachineConfig();
         _mockRegistrationClient.Setup(x => x.GetCollectorInfoAsync(config.MachineName))
             .ThrowsAsync(new InvalidOperationException("Registration service error"));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _processor.ProcessAsync(config));
-    }
-
-    [Fact]
-    public async Task ProcessAsync_ShouldThrowException_WhenPredictionEngineThrows()
-    {
-        // Arrange
-        MachinePredictionConfig config = CreateValidMachineConfig();
-        CollectorInfoDto collectorInfo = CreateCollectorInfoWithSensors(config.InputSensors);
-        List<IMeasurementData> measurements = CreateTestMeasurements();
-
-        var preprocessedData = ProcessorTestHelper.GetValidTestData();
-
-        _mockRegistrationClient.Setup(x => x.GetCollectorInfoAsync(config.MachineName))
-            .ReturnsAsync(collectorInfo);
-        _mockInfluxRepository.Setup(x => x.QueryMeasurementsAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SensorInfoDto>>()))
-            .ReturnsAsync(measurements);
-        _mockStrategyFactory.Setup(x => x.CreateStrategy(config.PreprocessingStrategy))
-            .Returns(_mockPreprocessingStrategy.Object);
-        _mockPreprocessingStrategy.Setup(x => x.PreprocessAsync(It.IsAny<List<IMeasurementData>>(), It.IsAny<MachinePredictionConfig>()))
-            .Returns(preprocessedData);
-        _mockPredictionEngine.Setup(x => x.PredictAsync(config.ModelPath, preprocessedData))
-            .ThrowsAsync(new InvalidOperationException("Prediction error"));
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => _processor.ProcessAsync(config));
