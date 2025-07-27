@@ -1,4 +1,4 @@
-﻿namespace DataAggregator.Processor.Configuration;
+﻿namespace DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 
 /// <summary>
 /// Configuration for preprocessing operations including Z-score normalization.

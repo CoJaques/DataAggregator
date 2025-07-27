@@ -2,7 +2,7 @@ using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services;
 using DataAggregator.Processor.Services.DataStorage;
 using DataAggregator.Processor.Services.Prediction;
-using DataAggregator.Processor.Services.PreProcessing;
+using DataAggregator.Processor.Services.Processing.Factory;
 using DataAggregator.Processor.Services.Registration;
 using Serilog;
 
@@ -38,8 +38,7 @@ builder.Services.AddHttpClient<IRegistrationServiceClient, RegistrationServiceCl
 
 // Register services
 builder.Services.AddScoped<IDataRepository, InfluxV3Repository>();
-builder.Services.AddSingleton<IOnnxPredictionEngine, OnnxPredictionEngine>();
-builder.Services.AddSingleton<IPreprocessingStrategyFactory, PreprocessingStrategyFactory>();
+builder.Services.AddSingleton<IDataProcessorFactory, DataProcessorFactory>();
 builder.Services.AddScoped<IMachinePredictionProcessor, MachinePredictionProcessor>();
 
 // Register background service
