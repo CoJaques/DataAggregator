@@ -55,6 +55,17 @@ services:
     volumes:
       - influx_data:/var/lib/influxdb3
 
+  influxdb-ui:
+    image: influxdata/influxdb3-ui:1.0.0
+    container_name: influxdb3-explorer
+    ports:
+      - "8888:80"
+    environment:
+      INFLUXDB_URL: http://influxdb:8181
+    command: ["--mode=admin"]
+    depends_on:
+      - influxdb
+      
 volumes:
   postgres_data:
   influx_data:

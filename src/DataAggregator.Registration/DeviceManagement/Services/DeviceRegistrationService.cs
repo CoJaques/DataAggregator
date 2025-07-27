@@ -112,6 +112,7 @@ public class DeviceRegistrationService(IDeviceRepository deviceRepository, IInfl
             SensorType = sensor.Type,
             Unit = sensor.Unit,
             Metadata = sensor.Metadata,
+            DataType = sensor.DataType,
             Device = device,
         });
 
