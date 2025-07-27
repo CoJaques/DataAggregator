@@ -16,16 +16,6 @@ public class MachinePredictionConfig
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the path to the ONNX model file.
-    /// </summary>
-    public string ModelPath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the preprocessing strategy name.
-    /// </summary>
-    public string PreprocessingStrategy { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the list of input sensor names.
     /// </summary>
     public List<string> InputSensors { get; set; } = [];
@@ -41,7 +31,7 @@ public class MachinePredictionConfig
     public int CycleIntervalSeconds { get; set; } = 1;
 
     /// <summary>
-    /// Gets or sets the preprocessing configuration for Z-score normalization.
+    /// Gets or sets the processing pipeline for this machine.
     /// </summary>
-    public PreprocessingConfig Preprocessing { get; set; } = new();
+    public List<object>? ProcessingPipeline { get; set; }
 }

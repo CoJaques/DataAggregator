@@ -1,40 +1,38 @@
 using DataAggregator.Collector.Shared.Models;
-using DataAggregator.Processor.Configuration;
+using DataAggregator.Processor.Services.Processing.Abstraction;
 using Serilog;
 
-namespace DataAggregator.Processor.Services.PreProcessing.ActuatorMergingCurrentPreprocessing;
+namespace DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 
 /// <summary>
 /// Feature extractor for actuator current data based on ML.NET approach.
 /// Extracts 14 agnostic features with Z-score normalization.
 /// </summary>
-public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
+/// <remarks>
+/// Initializes a new instance of the <see cref="ActuatorCurrentFeatureExtractor"/> class.
+/// </remarks>
+/// <param name="config">The configuration of the processor.</param>
+public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IDataProcessor
 {
     #region Public methods
 
     /// <summary>
     /// Preprocesses actuator current measurements into a feature vector.
     /// </summary>
-    /// <param name="measurements">List of raw measurements from the data window.</param>
-    /// <param name="config">Configuration for the machine prediction.</param>
+    /// <param name="input">List of raw measurements from the data window.</param>
     /// <returns>Feature vector as dictionary mapping feature names to values for a single sample.</returns>
-    public IEnumerable<IMeasurementData> PreprocessAsync(IEnumerable<IMeasurementData> measurements, MachinePredictionConfig config)
+    public Task<IEnumerable<IMeasurementData>> ProcessAsync(IEnumerable<IMeasurementData> input)
     {
-        Log.Debug(
-            "Preprocessing {Count} measurements for machine {MachineName}",
-            measurements.Count(),
-            config.MachineName);
-
         // Extract the 14 features from measurements
-        float[] features = ExtractFeatures(measurements, config.InputSensors);
+        float[] features = ExtractFeatures(input);
 
         // Apply Z-score normalization if enabled
-        float[] normalizedFeatures = NormalizeFeaturesAsync(features, config.Preprocessing);
+        float[] normalizedFeatures = NormalizeFeaturesAsync(features, config);
 
         DateTime meanTime;
 
-        if (measurements.Count() != 0)
-            meanTime = measurements.ElementAt(measurements.Count() / 2).TimeStamp;
+        if (input.Count() != 0)
+            meanTime = input.ElementAt(input.Count() / 2).TimeStamp;
         else
             meanTime = DateTime.UtcNow;
 
@@ -57,46 +55,37 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
             new MeasurementData<string>(meanTime, "Label", string.Empty),
         };
 
-        Log.Debug("Preprocessing completed for machine {MachineName}", config.MachineName);
-        return result;
+        return Task.FromResult(result.AsEnumerable());
     }
 
     #endregion
 
     #region Private methods
 
-    private float[] ExtractFeatures(IEnumerable<IMeasurementData> measurements, List<string> sensors)
+    private float[] ExtractFeatures(IEnumerable<IMeasurementData> measurements)
     {
-        if (measurements == null || sensors == null || sensors.Count == 0)
+        if (measurements == null)
         {
-            Log.Warning("No measurements or sensors provided for feature extraction.");
+            Log.Warning("No measurements provided for feature extraction.");
             return new float[14];
         }
 
-        Log.Debug("Extracting features for {SensorCount} sensors", sensors.Count);
-
-        // Concatenate all currents from all actuators (like in the notebook)
+        // Concatenate all currents from all actuators
         var allCurrents = new List<float>();
         foreach (IMeasurementData measurement in measurements)
         {
-            foreach (string sensor in sensors)
+            object value = measurement.GetRawValue();
+            if (value is float floatValue)
             {
-                if (measurement.SensorName == sensor)
-                {
-                    object value = measurement.GetRawValue();
-                    if (value is float floatValue)
-                    {
-                        allCurrents.Add(floatValue);
-                    }
-                    else if (value is double doubleValue)
-                    {
-                        allCurrents.Add((float)doubleValue);
-                    }
-                    else if (value is int intValue)
-                    {
-                        allCurrents.Add(intValue);
-                    }
-                }
+                allCurrents.Add(floatValue);
+            }
+            else if (value is double doubleValue)
+            {
+                allCurrents.Add((float)doubleValue);
+            }
+            else if (value is int intValue)
+            {
+                allCurrents.Add(intValue);
             }
         }
 
@@ -127,7 +116,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         float changeDensity = significantChanges / (float)allCurrents.Count;
 
         // Extract actuator currents for correlation analysis
-        List<List<float>> actuatorsCurrents = ExtractActuatorCurrents(measurements, sensors);
+        List<List<float>> actuatorsCurrents = ExtractActuatorCurrents(measurements);
 
         // Features 3-5: Inter-actuator correlations
         List<float> correlations = CalculateInterActuatorCorrelations(actuatorsCurrents);
@@ -179,7 +168,7 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         ];
     }
 
-    private List<List<float>> ExtractActuatorCurrents(IEnumerable<IMeasurementData> measurements, List<string> sensors)
+    private List<List<float>> ExtractActuatorCurrents(IEnumerable<IMeasurementData> measurements)
     {
         var actuatorsCurrents = new List<List<float>>();
 
@@ -187,6 +176,8 @@ public class ActuatorCurrentFeatureExtractor : IPreprocessingStrategy
         var measurementsBySensor = measurements
             .GroupBy(m => m.SensorName)
             .ToDictionary(g => g.Key, g => g.ToList());
+
+        var sensors = measurementsBySensor.Keys.ToList();
 
         // Extract currents for each sensor/Actuator
         foreach (string sensor in sensors)

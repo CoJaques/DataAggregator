@@ -17,7 +17,7 @@ public class InfluxV3Repository : IDataRepository, IDisposable
     private InfluxDBClient? _client;
 
     /// <inheritdoc/>
-    public void InitializeAsync(string endpoint, string token)
+    public void Initialize(string endpoint, string token)
     {
         _client?.Dispose();
 

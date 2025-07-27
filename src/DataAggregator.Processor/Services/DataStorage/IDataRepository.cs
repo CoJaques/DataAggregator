@@ -13,7 +13,7 @@ public interface IDataRepository
     /// </summary>
     /// <param name="endpoint">The InfluxDB endpoint.</param>
     /// <param name="token">The authentication token.</param>
-    public void InitializeAsync(string endpoint, string token);
+    public void Initialize(string endpoint, string token);
 
     /// <summary>
     /// Queries measurements from InfluxDB for a specific time range and sensors with type information.

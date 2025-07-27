@@ -1,4 +1,4 @@
-namespace DataAggregator.Processor.Services.PreProcessing.ActuatorMergingCurrentPreprocessing;
+namespace DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 
 /// <summary>
 /// Utility class for mathematical operations used in feature extraction.

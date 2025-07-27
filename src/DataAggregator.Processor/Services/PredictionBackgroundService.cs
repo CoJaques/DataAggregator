@@ -96,18 +96,6 @@ public class PredictionBackgroundService(
         {
             try
             {
-                // Check if ONNX model file exists
-                string fullPath = Path.Combine(AppContext.BaseDirectory, machineConfig.ModelPath);
-                if (!File.Exists(fullPath))
-                {
-                    Log.Error(
-                        "ONNX model file not found for machine {MachineName}: {ModelPath}",
-                        machineConfig.MachineName,
-                        machineConfig.ModelPath);
-
-                    throw new FileNotFoundException($"ONNX model file not found: {machineConfig.ModelPath}");
-                }
-
                 // Validate configuration
                 if (string.IsNullOrEmpty(machineConfig.MachineName))
                 {
@@ -125,15 +113,6 @@ public class PredictionBackgroundService(
                         machineConfig.MachineName);
 
                     throw new InvalidOperationException($"No input sensors configured for machine {machineConfig.MachineName}");
-                }
-
-                if (string.IsNullOrEmpty(machineConfig.PreprocessingStrategy))
-                {
-                    Log.Error(
-                        "Preprocessing strategy is not configured for machine {MachineName}",
-                        machineConfig.MachineName);
-
-                    throw new InvalidOperationException($"Preprocessing strategy is not configured for machine {machineConfig.MachineName}");
                 }
 
                 Log.Information("Configuration validated for machine {MachineName}", machineConfig.MachineName);
