@@ -17,5 +17,6 @@ public static class SensorExtension
             sensor.SensorName,
             sensor.SensorType,
             sensor.Unit,
-            sensor.Metadata);
+            sensor.Metadata,
+            sensor.DataType);
 }

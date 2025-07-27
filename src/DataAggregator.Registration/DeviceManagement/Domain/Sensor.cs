@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using DataAggregator.Shared.Domain.DataType;
 
 namespace DataAggregator.Registration.DeviceManagement.Domain;
 
@@ -26,6 +27,11 @@ public class Sensor()
     /// Gets or sets the unit of measurement for the sensor.
     /// </summary>
     public string Unit { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the data type of the sensor values.
+    /// </summary>
+    public SensorDataType DataType { get; set; } = SensorDataType.Undefined;
 
     /// <summary>
     /// Gets or sets additional metadata for the sensor.

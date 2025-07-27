@@ -13,6 +13,7 @@ public static class SensorDataTypeExtension
     public static Type GetClrType(this SensorDataType dataType)
         => dataType switch
         {
+            SensorDataType.Undefined => throw new ArgumentException("Undefined data type cannot be mapped to CLR type"),
             SensorDataType.Boolean => typeof(bool),
             SensorDataType.Integer => typeof(int),
             SensorDataType.Double => typeof(double),

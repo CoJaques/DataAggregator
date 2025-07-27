@@ -79,8 +79,8 @@ public class InfluxDbRepository : IDataRepository, IDisposable
         {
             Token = _config.Token,
             Host = _config.Endpoint,
-            Organization = "Dataggregator",
-            Database = "Dataggregator",
+            Organization = InfluxHelper.DatabaseName,
+            Database = InfluxHelper.DatabaseName,
         };
 
         _client = new InfluxDBClient(clientConfig);
