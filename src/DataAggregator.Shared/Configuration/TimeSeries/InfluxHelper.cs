@@ -8,7 +8,7 @@ public static class InfluxHelper
     /// <summary>
     /// Constants for InfluxDB database name.
     /// </summary>
-    public const string DatabaseName = "Dataaggregator";
+    public const string DatabaseName = "Dataggregator";
 
     /// <summary>
     /// Constant for influxDb measurement table name for predictions.
