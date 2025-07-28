@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services.DataStorage;
@@ -130,9 +129,7 @@ public class MachinePredictionProcessor(
                 return false;
             }
 
-            string pipelineJson = JsonSerializer.Serialize(config.ProcessingPipeline);
-            var pipelineElements = JsonDocument.Parse(pipelineJson).RootElement.EnumerateArray().ToList();
-            _pipelineProcessors = processorFactory.CreateProcessors(pipelineElements);
+            _pipelineProcessors = processorFactory.CreateProcessors(config.ProcessingPipeline);
         }
 
         return true;

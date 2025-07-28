@@ -3,7 +3,8 @@ using DataAggregator.Processor.Services.Processing.Factory;
 using DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 using DataAggregator.Processor.Services.Prediction;
 using DataAggregator.Processor.Services.Processing.PostProcessing.StateDeductionPostProcess;
-using System.Text.Json;
+using System.Collections.Generic;
+using DataAggregator.Processor.Services.Processing.Onnx;
 
 namespace DataAggregator.Processor.Tests.Services.PreProcessing;
 
@@ -17,15 +18,37 @@ public class DataProcessorFactoryTests
     public void CreateProcessors_ShouldReturnCorrectProcessors_ForValidPipeline()
     {
         // Arrange
-        string pipelineJson = @"[
-            { ""Strategy"": ""actuatorcurrent"", ""EnableZScoreNormalization"": true, ""NormalizationParameters"": {} },
-            { ""Strategy"": ""onnxprediction"", ""ModelPath"": ""model.onnx"" },
-            { ""Strategy"": ""statedeductionpostprocessor"", ""Threshold"": 2 }
-        ]";
-        var pipelineElements = JsonDocument.Parse(pipelineJson).RootElement.EnumerateArray().ToList();
+        var pipeline = new List<ProcessorDescription>
+        {
+            new ProcessorDescription
+            {
+                Name = "actuatorcurrent",
+                Configuration = new PreprocessingConfig
+                {
+                    EnableZScoreNormalization = true,
+                    NormalizationParameters = new Dictionary<string, float[]>()
+                }
+            },
+            new ProcessorDescription
+            {
+                Name = "onnxprediction",
+                Configuration = new OnnxPredictionConfig
+                {
+                    ModelPath = "model.onnx"
+                }
+            },
+            new ProcessorDescription
+            {
+                Name = "statedeductionpostprocessor",
+                Configuration = new StateDeductionPostProcessorConfig
+                {
+                    Threshold = 2
+                }
+            }
+        };
 
         // Act
-        var processors = _factory.CreateProcessors(pipelineElements);
+        var processors = _factory.CreateProcessors(pipeline);
 
         // Assert
         Assert.Equal(3, processors.Count);
@@ -35,42 +58,41 @@ public class DataProcessorFactoryTests
     }
 
     [Fact]
-    public void CreateProcessors_ShouldThrowArgumentException_ForUnknownStrategy()
+    public void CreateProcessors_ShouldThrowArgumentException_ForUnknownName()
     {
         // Arrange
-        string pipelineJson = @"[
-            { ""Strategy"": ""unknownstrategy"" }
-        ]";
-        var pipelineElements = JsonDocument.Parse(pipelineJson).RootElement.EnumerateArray().ToList();
+        var pipeline = new List<ProcessorDescription>
+        {
+            new ProcessorDescription { Name = "unknownstrategy", Configuration = null }
+        };
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => _factory.CreateProcessors(pipelineElements));
+        Assert.Throws<ArgumentException>(() => _factory.CreateProcessors(pipeline));
     }
 
     [Fact]
     public void CreateProcessors_ShouldReturnEmptyList_ForEmptyPipeline()
     {
         // Arrange
-        string pipelineJson = "[]";
-        var pipelineElements = JsonDocument.Parse(pipelineJson).RootElement.EnumerateArray().ToList();
+        var pipeline = new List<ProcessorDescription>();
 
         // Act
-        var processors = _factory.CreateProcessors(pipelineElements);
+        var processors = _factory.CreateProcessors(pipeline);
 
         // Assert
         Assert.Empty(processors);
     }
 
     [Fact]
-    public void CreateProcessors_ShouldThrowArgumentException_WhenStrategyMissing()
+    public void CreateProcessors_ShouldThrowArgumentException_WhenNameMissing()
     {
         // Arrange
-        string pipelineJson = @"[
-            { ""EnableZScoreNormalization"": true }
-        ]";
-        var pipelineElements = JsonDocument.Parse(pipelineJson).RootElement.EnumerateArray().ToList();
+        var pipeline = new List<ProcessorDescription>
+        {
+            new ProcessorDescription { Name = "", Configuration = new PreprocessingConfig() }
+        };
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => _factory.CreateProcessors(pipelineElements));
+        Assert.Throws<ArgumentException>(() => _factory.CreateProcessors(pipeline));
     }
 }

@@ -1,6 +1,5 @@
 using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services.Prediction;
-using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace DataAggregator.Processor.Services;
@@ -14,7 +13,7 @@ namespace DataAggregator.Processor.Services;
 /// <param name="configuration">The prediction service configuration.</param>
 /// <param name="serviceProvider">The service provider.</param>
 public class PredictionBackgroundService(
-    IOptions<PredictionServiceConfiguration> configuration,
+    PredictionServiceConfiguration configuration,
     IServiceProvider serviceProvider) : BackgroundService
 {
     #region Private fields
@@ -37,7 +36,7 @@ public class PredictionBackgroundService(
             ValidateConfigurationAsync();
 
             // Schedule machines
-            foreach (MachinePredictionConfig machineConfig in configuration.Value.Machines)
+            foreach (MachinePredictionConfig machineConfig in configuration.Machines)
             {
                 if (machineConfig.Enabled)
                 {
@@ -47,7 +46,7 @@ public class PredictionBackgroundService(
 
             Log.Information(
                 "Prediction background service started with {MachineCount} machines",
-                configuration.Value.Machines.Count(m => m.Enabled));
+                configuration.Machines.Count(m => m.Enabled));
 
             // Keep the service running
             while (!stoppingToken.IsCancellationRequested)
@@ -84,7 +83,7 @@ public class PredictionBackgroundService(
 
     private void ValidateConfigurationAsync()
     {
-        var enabledMachines = configuration.Value.Machines.Where(m => m.Enabled).ToList();
+        var enabledMachines = configuration.Machines.Where(m => m.Enabled).ToList();
 
         if (enabledMachines.Count == 0)
         {

@@ -89,7 +89,7 @@ public class MachinePredictionProcessorTests
             .ReturnsAsync(measurements);
         _mockProcessor.Setup(x => x.ProcessAsync(It.IsAny<IEnumerable<IMeasurementData>>()))
             .ReturnsAsync(processedData);
-        _mockProcessorFactory.Setup(x => x.CreateProcessors(It.IsAny<IEnumerable<System.Text.Json.JsonElement>>()))
+        _mockProcessorFactory.Setup(x => x.CreateProcessors(It.IsAny<IEnumerable<ProcessorDescription>>()))
             .Returns(new List<IDataProcessor> { _mockProcessor.Object });
 
         await _processor.ProcessAsync(config);
@@ -113,7 +113,7 @@ public class MachinePredictionProcessorTests
             .ReturnsAsync(measurements);
         _mockProcessor.Setup(x => x.ProcessAsync(It.IsAny<IEnumerable<IMeasurementData>>()))
             .ReturnsAsync(processedData);
-        _mockProcessorFactory.Setup(x => x.CreateProcessors(It.IsAny<IEnumerable<System.Text.Json.JsonElement>>()))
+        _mockProcessorFactory.Setup(x => x.CreateProcessors(It.IsAny<IEnumerable<ProcessorDescription>>()))
             .Returns(new List<IDataProcessor> { _mockProcessor.Object });
 
         await _processor.ProcessAsync(config); // First call with endpoint1
@@ -141,7 +141,7 @@ public class MachinePredictionProcessorTests
             .ReturnsAsync(measurements);
         _mockProcessor.Setup(x => x.ProcessAsync(It.IsAny<IEnumerable<IMeasurementData>>()))
             .ReturnsAsync(processedData);
-        _mockProcessorFactory.Setup(x => x.CreateProcessors(It.IsAny<IEnumerable<System.Text.Json.JsonElement>>()))
+        _mockProcessorFactory.Setup(x => x.CreateProcessors(It.IsAny<IEnumerable<ProcessorDescription>>()))
             .Returns(new List<IDataProcessor> { _mockProcessor.Object });
 
         await _processor.ProcessAsync(config);
@@ -169,7 +169,7 @@ public class MachinePredictionProcessorTests
         WindowSizeSeconds = 300,
         CycleIntervalSeconds = 60,
         Enabled = true,
-        ProcessingPipeline = new List<object> { new { Strategy = "mock" } }
+        ProcessingPipeline = new List<ProcessorDescription> { new() }
     };
 
     private static CollectorInfoDto CreateCollectorInfoWithSensors(IEnumerable<string> sensorNames, string endpoint = "http://localhost:8086") => new(
