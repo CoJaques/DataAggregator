@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DataAggregator.Processor.Services.Processing.Abstraction;
 
 namespace DataAggregator.Processor.Services.Processing.Factory;
@@ -11,7 +10,7 @@ public interface IDataProcessorFactory
     /// <summary>
     /// Create multiple data processor which correspond to the pipeline configuration.
     /// </summary>
-    /// <param name="pipelineConfig">The pipeline configuration.</param>
+    /// <param name="pipeline">The pipeline configuration.</param>
     /// <returns>Configured pipeline strategy.</returns>
-    public List<IDataProcessor> CreateProcessors(IEnumerable<JsonElement> pipelineConfig);
+    public List<IDataProcessor> CreateProcessors(IEnumerable<ProcessorDescription> pipeline);
 }

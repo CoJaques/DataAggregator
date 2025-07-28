@@ -27,7 +27,9 @@ public class OnnxPredictionEngine(OnnxPredictionConfig config) : IDataProcessor,
         try
         {
             // Load the model or get the existing session
-            InferenceSession session = LoadOrGetModel(config.ModelPath);
+            string executablePath = AppContext.BaseDirectory;
+            string modelPath = Path.Combine(executablePath, config.ModelPath);
+            InferenceSession session = LoadOrGetModel(modelPath);
 
             if (!input.Any())
             {

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DataAggregator.Processor.Services.Prediction;
 using DataAggregator.Processor.Services.Processing.Abstraction;
 using DataAggregator.Processor.Services.Processing.Onnx;
@@ -8,43 +7,38 @@ using DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMerging
 namespace DataAggregator.Processor.Services.Processing.Factory;
 
 /// <summary>
-/// Factory implementation for creating processor strategies.
+/// Defines a factory for creating data processors based on a pipeline description.
 /// </summary>
 public class DataProcessorFactory : IDataProcessorFactory
 {
     /// <inheritdoc/>
-    public List<IDataProcessor> CreateProcessors(IEnumerable<JsonElement> pipelineConfig)
+    public List<IDataProcessor> CreateProcessors(IEnumerable<ProcessorDescription> pipeline)
     {
         var processors = new List<IDataProcessor>();
-        foreach (JsonElement element in pipelineConfig)
+        foreach (ProcessorDescription desc in pipeline)
         {
-            if (!element.TryGetProperty("Strategy", out JsonElement strategyProp))
-                throw new ArgumentException("Each processor config must have a 'Strategy' property.");
-
-            string? strategy = strategyProp.GetString()?.ToLowerInvariant();
-
-            switch (strategy)
+            switch (desc.Name.ToLowerInvariant())
             {
                 case "actuatorcurrent":
-                    PreprocessingConfig? preConfig = element.Deserialize<PreprocessingConfig>();
-                    if (preConfig == null)
-                        throw new ArgumentException("Preprocessing configuration is required for ActuatorCurrentFeatureExtractor.");
-                    processors.Add(new ActuatorCurrentFeatureExtractor(preConfig));
+                    if (desc.Configuration is PreprocessingConfig preConfig)
+                        processors.Add(new ActuatorCurrentFeatureExtractor(preConfig));
+                    else
+                        throw new ArgumentException("Invalid config type for actuatorcurrent");
                     break;
                 case "onnxprediction":
-                    OnnxPredictionConfig? onnxConfig = element.Deserialize<OnnxPredictionConfig>();
-                    if (onnxConfig == null)
-                        throw new ArgumentException("ONNX prediction configuration is required.");
-                    processors.Add(new OnnxPredictionEngine(onnxConfig));
+                    if (desc.Configuration is OnnxPredictionConfig onnxConfig)
+                        processors.Add(new OnnxPredictionEngine(onnxConfig));
+                    else
+                        throw new ArgumentException("Invalid config type for onnxprediction");
                     break;
                 case "statedeductionpostprocessor":
-                    StateDeductionPostProcessorConfig? postConfig = element.Deserialize<StateDeductionPostProcessorConfig>();
-                    if (postConfig == null)
-                        throw new ArgumentException("Post-processing configuration is required for MyCustomPostProcessor.");
-                    processors.Add(new StateDeductionPostProcessor(postConfig));
+                    if (desc.Configuration is StateDeductionPostProcessorConfig stateConfig)
+                        processors.Add(new StateDeductionPostProcessor(stateConfig));
+                    else
+                        throw new ArgumentException("Invalid config type for statedeductionpostprocessor");
                     break;
                 default:
-                    throw new ArgumentException($"Unknown processor strategy: {strategy}");
+                    throw new ArgumentException($"Unknown processor name: {desc.Name}");
             }
         }
 

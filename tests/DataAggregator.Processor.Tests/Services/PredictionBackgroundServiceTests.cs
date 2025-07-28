@@ -1,6 +1,8 @@
 using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services;
 using DataAggregator.Processor.Services.Prediction;
+using DataAggregator.Processor.Services.Processing.Factory;
+using DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -146,9 +148,17 @@ public class PredictionBackgroundServiceTests : IDisposable
                     WindowSizeSeconds = 300,
                     CycleIntervalSeconds = 60,
                     Enabled = true,
-                    ProcessingPipeline = new List<object>
+                    ProcessingPipeline = new List<ProcessorDescription>
                     {
-                        new { Strategy = "actuatorcurrent", EnableZScoreNormalization = true, NormalizationParameters = new Dictionary<string, float[]>() },
+                        new ProcessorDescription
+                        {
+                            Name = "actuatorcurrent",
+                            Configuration = new PreprocessingConfig
+                            {
+                                EnableZScoreNormalization = true,
+                                NormalizationParameters = new Dictionary<string, float[]>()
+                            }
+                        }
                     },
                 },
                 new MachinePredictionConfig
@@ -158,9 +168,17 @@ public class PredictionBackgroundServiceTests : IDisposable
                     WindowSizeSeconds = 600,
                     CycleIntervalSeconds = 120,
                     Enabled = true,
-                    ProcessingPipeline = new List<object>
+                    ProcessingPipeline = new List<ProcessorDescription>
                     {
-                        new { Strategy = "actuatorcurrent", EnableZScoreNormalization = true, NormalizationParameters = new Dictionary<string, float[]>() },
+                        new ProcessorDescription
+                        {
+                            Name = "actuatorcurrent",
+                            Configuration = new PreprocessingConfig
+                            {
+                                EnableZScoreNormalization = true,
+                                NormalizationParameters = new Dictionary<string, float[]>()
+                            }
+                        }
                     },
                 }
             ],

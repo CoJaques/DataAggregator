@@ -1,4 +1,6 @@
-﻿namespace DataAggregator.Processor.Configuration;
+﻿using DataAggregator.Processor.Services.Processing.Factory;
+
+namespace DataAggregator.Processor.Configuration;
 
 /// <summary>
 /// Configuration for a specific machine prediction.
@@ -33,5 +35,5 @@ public class MachinePredictionConfig
     /// <summary>
     /// Gets or sets the processing pipeline for this machine.
     /// </summary>
-    public List<object>? ProcessingPipeline { get; set; }
+    public List<ProcessorDescription> ProcessingPipeline { get; set; } = new();
 }
