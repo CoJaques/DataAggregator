@@ -166,7 +166,7 @@ public class MachinePredictionProcessorTests
     {
         MachineName = "test_machine",
         InputSensors = ["sensor1", "sensor2"],
-        WindowSizeSeconds = 300,
+        WindowSize = 300,
         CycleIntervalSeconds = 60,
         Enabled = true,
         ProcessingPipeline = new List<ProcessorDescription> { new() }

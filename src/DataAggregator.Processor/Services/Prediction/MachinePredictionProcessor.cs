@@ -137,13 +137,23 @@ public class MachinePredictionProcessor(
 
     private async Task<List<IMeasurementData>> FetchDataWindowAsync(MachinePredictionConfig config, List<SensorInfoDto> sensors)
     {
-        DateTime endTime = DateTime.UtcNow;
-        DateTime startTime = endTime.AddSeconds(-config.WindowSizeSeconds);
-        return await influxRepository.QueryMeasurementsAsync(
-            config.MachineName,
-            startTime,
-            endTime,
-            sensors);
+        if (config.WindowSizeInSeconds)
+        {
+            DateTime endTime = DateTime.UtcNow;
+            DateTime startTime = endTime.AddSeconds(-config.WindowSize);
+            return await influxRepository.QueryMeasurementsAsync(
+                config.MachineName,
+                startTime,
+                endTime,
+                sensors);
+        }
+        else
+        {
+            return await influxRepository.QueryLastMeasurements(
+                config.MachineName,
+                config.WindowSize,
+                sensors);
+        }
     }
     #endregion
 

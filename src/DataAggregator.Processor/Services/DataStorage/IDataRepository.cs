@@ -26,6 +26,15 @@ public interface IDataRepository
     public Task<List<IMeasurementData>> QueryMeasurementsAsync(string table, DateTime startTime, DateTime endTime, List<SensorInfoDto> sensors);
 
     /// <summary>
+    /// Queries the last measurements from InfluxDB for a specific table and window size, filtering by sensors.
+    /// </summary>
+    /// <param name="table">The table name.</param>
+    /// <param name="windowSize">The size of the window.</param>
+    /// <param name="sensors">The list of sensor information with type data.</param>
+    /// <returns>A list of measurements data of windowSize size max.</returns>
+    public Task<List<IMeasurementData>> QueryLastMeasurements(string table, int windowSize, List<SensorInfoDto> sensors);
+
+    /// <summary>
     /// Writes a single measurement to InfluxDB.
     /// </summary>
     /// <param name="tag">The tag name (machine name).</param>
