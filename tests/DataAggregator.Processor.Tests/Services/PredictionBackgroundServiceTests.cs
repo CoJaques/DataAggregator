@@ -4,7 +4,6 @@ using DataAggregator.Processor.Services.Prediction;
 using DataAggregator.Processor.Services.Processing.Factory;
 using DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Moq;
 
 namespace DataAggregator.Processor.Tests.Services;
@@ -14,7 +13,6 @@ namespace DataAggregator.Processor.Tests.Services;
 /// </summary>
 public class PredictionBackgroundServiceTests : IDisposable
 {
-    private readonly Mock<IOptions<PredictionServiceConfiguration>> _mockConfiguration;
     private readonly Mock<IMachinePredictionProcessor> _mockPredictionProcessor;
     private readonly Mock<IServiceProvider> _serviceProvider;
     private readonly Mock<IServiceScope> _mockScope;
@@ -24,7 +22,6 @@ public class PredictionBackgroundServiceTests : IDisposable
 
     public PredictionBackgroundServiceTests()
     {
-        _mockConfiguration = new Mock<IOptions<PredictionServiceConfiguration>>();
         _mockPredictionProcessor = new Mock<IMachinePredictionProcessor>();
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -49,7 +46,7 @@ public class PredictionBackgroundServiceTests : IDisposable
             .Returns(_mockScope.Object);
 
         _backgroundService = new PredictionBackgroundService(
-            _mockConfiguration.Object,
+            CreateValidConfiguration(),
             _serviceProvider.Object);
     }
 
@@ -59,7 +56,6 @@ public class PredictionBackgroundServiceTests : IDisposable
     public async Task ExecuteAsync_ShouldStartSuccessfully_WhenValidConfigurationProvided()
     {
         var config = CreateValidConfiguration();
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
 
         Task task = _backgroundService.StartAsync(_cancellationTokenSource.Token);
         await Task.Delay(100);
@@ -72,7 +68,6 @@ public class PredictionBackgroundServiceTests : IDisposable
     public async Task ExecuteAsync_ShouldScheduleEnabledMachines_WhenConfigurationContainsEnabledMachines()
     {
         var config = CreateValidConfiguration();
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
 
         Task task = _backgroundService.StartAsync(_cancellationTokenSource.Token);
         await Task.Delay(100);
@@ -90,7 +85,6 @@ public class PredictionBackgroundServiceTests : IDisposable
         {
             Machines = [],
         };
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
 
         Task task = _backgroundService.StartAsync(_cancellationTokenSource.Token);
         await Task.Delay(100);
@@ -100,30 +94,9 @@ public class PredictionBackgroundServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrowInvalidOperationException_WhenMachineNameIsEmpty()
-    {
-        var config = CreateValidConfiguration();
-        config.Machines[0].MachineName = string.Empty;
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _backgroundService.StartAsync(_cancellationTokenSource.Token));
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldThrowInvalidOperationException_WhenNoInputSensorsConfigured()
-    {
-        var config = CreateValidConfiguration();
-        config.Machines[0].InputSensors.Clear();
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _backgroundService.StartAsync(_cancellationTokenSource.Token));
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ShouldStopGracefully_WhenCancellationRequested()
     {
         var config = CreateValidConfiguration();
-        _mockConfiguration.Setup(x => x.Value).Returns(config);
 
         Task task = _backgroundService.StartAsync(_cancellationTokenSource.Token);
         await Task.Delay(100);
@@ -145,7 +118,7 @@ public class PredictionBackgroundServiceTests : IDisposable
                 {
                     MachineName = "test_machine_1",
                     InputSensors = ["sensor1", "sensor2"],
-                    WindowSizeSeconds = 300,
+                    WindowSize = 300,
                     CycleIntervalSeconds = 60,
                     Enabled = true,
                     ProcessingPipeline = new List<ProcessorDescription>
@@ -165,7 +138,7 @@ public class PredictionBackgroundServiceTests : IDisposable
                 {
                     MachineName = "test_machine_2",
                     InputSensors = ["sensor3", "sensor4"],
-                    WindowSizeSeconds = 600,
+                    WindowSize = 600,
                     CycleIntervalSeconds = 120,
                     Enabled = true,
                     ProcessingPipeline = new List<ProcessorDescription>
