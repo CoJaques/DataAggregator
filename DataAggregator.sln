@@ -38,8 +38,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Collector.Op
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Processor", "src\DataAggregator.Processor\DataAggregator.Processor.csproj", "{039EC00D-5EDF-4C48-B449-29CFB6750232}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "processor", "processor", "{330C7B17-DB90-458C-B630-99F9C1B5EA45}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "processor", "processor", "{EB9A5576-3E00-4007-8C72-2235E0A1546D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAggregator.Processor.Tests", "tests\DataAggregator.Processor.Tests\DataAggregator.Processor.Tests.csproj", "{EFE47FE6-F41E-CDD6-0991-472080AD88B0}"
