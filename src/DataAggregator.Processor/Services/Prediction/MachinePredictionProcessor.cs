@@ -30,8 +30,8 @@ public class MachinePredictionProcessor(
 
             InitializeRepositoryIfNeeded(collectorInfo);
 
-            List<IMeasurementData> measurements = await FetchDataWindowAsync(config, requestedSensors);
-            if (measurements.Count == 0)
+            IEnumerable<IReadOnlyList<IMeasurementData>> measurements = await FetchDataWindowAsync(config, requestedSensors);
+            if (!measurements.Any())
             {
                 Log.Warning("No measurements found for machine {MachineName} in the specified time window", config.MachineName);
                 return;
@@ -96,27 +96,49 @@ public class MachinePredictionProcessor(
         }
     }
 
-    private async Task<IEnumerable<IMeasurementData>?> RunPipelineAsync(IEnumerable<IMeasurementData> data, string machineName)
+    private async Task<IReadOnlyList<IMeasurementData>> RunPipelineAsync(
+        IEnumerable<IReadOnlyList<IMeasurementData>> dataBlocks,
+        string machineName)
     {
-        foreach (IDataProcessor processor in _pipelineProcessors!)
+        if (_pipelineProcessors is null || _pipelineProcessors.Count == 0)
         {
-            try
+            Log.Error("No processing pipeline configured for machine {MachineName}", machineName);
+            return Array.Empty<IMeasurementData>();
+        }
+
+        var results = new List<IMeasurementData>();
+
+        foreach (IReadOnlyList<IMeasurementData> block in dataBlocks)
+        {
+            IEnumerable<IMeasurementData>? current = block;
+
+            foreach (IDataProcessor processor in _pipelineProcessors)
             {
-                data = await processor.ProcessAsync(data);
-                if (data is null || !data.Any())
+                try
                 {
-                    Log.Warning("Processor {Processor} returned no data for machine {MachineName}", processor.GetType().Name, machineName);
-                    return null;
+                    current = await processor.ProcessAsync(current);
+                    if (current is null || !current.Any())
+                    {
+                        Log.Warning("Processor {Processor} returned no data for machine {MachineName} (block skipped)", processor.GetType().Name, machineName);
+                        current = null;
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Error in processor {Processor} for machine {MachineName} (block skipped)", processor.GetType().Name, machineName);
+                    current = null;
+                    break;
                 }
             }
-            catch (Exception ex)
+
+            if (current is not null)
             {
-                Log.Error(ex, "Error in processor {Processor} for machine {MachineName}", processor.GetType().Name, machineName);
-                return null;
+                results.AddRange(current);
             }
         }
 
-        return data;
+        return results;
     }
 
     private bool BuildPipelineIfNeeded(MachinePredictionConfig config)
@@ -135,30 +157,75 @@ public class MachinePredictionProcessor(
         return true;
     }
 
-    private async Task<List<IMeasurementData>> FetchDataWindowAsync(MachinePredictionConfig config, List<SensorInfoDto> sensors)
+    private async Task<IEnumerable<IReadOnlyList<IMeasurementData>>> FetchDataWindowAsync(MachinePredictionConfig config, List<SensorInfoDto> sensors)
     {
+        List<List<IMeasurementData>> measurements = [];
+
+        // If we want to fetch the last N measurements, we must take inaccount the number of sensors
+        int windowSize = config.WindowSize * config.InputSensors.Count;
+
+        // If the window size is in secondes, simply query the measurements for the last N seconds.
         if (config.WindowSizeInSeconds)
         {
             DateTime endTime = DateTime.UtcNow;
             DateTime startTime = endTime.AddSeconds(-config.WindowSize);
-            return await influxRepository.QueryMeasurementsAsync(
+
+            List<IMeasurementData> datas = await influxRepository.QueryMeasurementsAsync(
                 config.MachineName,
                 startTime,
                 endTime,
                 sensors);
+
+            measurements.Add(datas);
         }
         else
         {
-            return await influxRepository.QueryLastMeasurements(
+            // Otherwise, query all the measurements since the last query, and slice it in windows size list
+            if (_lastQueryTime == DateTime.MinValue)
+            {
+                // For the first run, we assume we want all the element for the CycleIntervalSeconds period.
+                _lastQueryTime = DateTime.UtcNow.AddSeconds(-config.CycleIntervalSeconds);
+            }
+
+            List<IMeasurementData> datas = await influxRepository.QueryMeasurementsAsync(
                 config.MachineName,
-                config.WindowSize,
+                _lastQueryTime,
+                DateTime.UtcNow,
                 sensors);
+
+            if (datas.Count < config.WindowSize)
+                return measurements;
+
+            datas = [.. datas.OrderBy(d => d.TimeStamp)];
+
+            int fullBlockCount = datas.Count / config.WindowSize;
+
+            // Slice the data into windows of size config.WindowSize
+            for (int i = 0; i < fullBlockCount; i++)
+            {
+                List<IMeasurementData> block = datas.GetRange(i * config.WindowSize * config.InputSensors.Count, config.WindowSize);
+                measurements.Add(block);
+            }
+
+            // Set the last query time to the maximum timestamp of the fetched data complete block,
+            // so that the next query will only fetch new data.
+            int lastProcessedIndex = (fullBlockCount * config.WindowSize) - 1;
+            _lastQueryTime = datas[lastProcessedIndex].TimeStamp;
         }
+
+        Log.Debug("Fetched {Count} data blocks for machine {MachineName}", measurements.Count, config.MachineName);
+
+        // TODO CJS : REMOVE
+        Log.Debug("First element timestamp: {Timestamp}", measurements.First().First().TimeStamp);
+        Log.Debug("Last element timestamp: {Timestamp}", measurements.Last().Last().TimeStamp);
+
+        return measurements;
     }
     #endregion
 
     #region Private fields
     private List<IDataProcessor>? _pipelineProcessors;
     private string? _lastEndpoint;
+    private DateTime _lastQueryTime = DateTime.MinValue;
     #endregion
 }
