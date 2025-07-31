@@ -161,9 +161,6 @@ public class MachinePredictionProcessor(
     {
         List<List<IMeasurementData>> measurements = [];
 
-        // If we want to fetch the last N measurements, we must take inaccount the number of sensors
-        int windowSize = config.WindowSize * config.InputSensors.Count;
-
         // If the window size is in secondes, simply query the measurements for the last N seconds.
         if (config.WindowSizeInSeconds)
         {
@@ -180,6 +177,9 @@ public class MachinePredictionProcessor(
         }
         else
         {
+            // If we want to fetch the last N measurements, we must take inaccount the number of sensors
+            int windowSize = config.WindowSize * config.InputSensors.Count;
+
             // Otherwise, query all the measurements since the last query, and slice it in windows size list
             if (_lastQueryTime == DateTime.MinValue)
             {
@@ -193,23 +193,23 @@ public class MachinePredictionProcessor(
                 DateTime.UtcNow,
                 sensors);
 
-            if (datas.Count < config.WindowSize)
+            if (datas.Count < windowSize)
                 return measurements;
 
             datas = [.. datas.OrderBy(d => d.TimeStamp)];
 
-            int fullBlockCount = datas.Count / config.WindowSize;
+            int fullBlockCount = datas.Count / windowSize;
 
-            // Slice the data into windows of size config.WindowSize
+            // Slice the data into windows of size windowSize.
             for (int i = 0; i < fullBlockCount; i++)
             {
-                List<IMeasurementData> block = datas.GetRange(i * config.WindowSize * config.InputSensors.Count, config.WindowSize);
+                List<IMeasurementData> block = datas.GetRange(i * windowSize, windowSize);
                 measurements.Add(block);
             }
 
             // Set the last query time to the maximum timestamp of the fetched data complete block,
             // so that the next query will only fetch new data.
-            int lastProcessedIndex = (fullBlockCount * config.WindowSize) - 1;
+            int lastProcessedIndex = (fullBlockCount * windowSize) - 1;
             _lastQueryTime = datas[lastProcessedIndex].TimeStamp;
         }
 
