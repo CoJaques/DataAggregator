@@ -92,19 +92,8 @@ public class StateDeductionPostProcessor(StateDeductionPostProcessorConfig confi
     private IEnumerable<IMeasurementData> OverrideStateInBatch(List<IMeasurementData> batch, string forcedValue)
         => batch.Select(
             x => x.SensorName == _resultOutputName
-                ? new MeasurementDataWrapper(x, forcedValue)
+                ? new MeasurementData<string>(x.TimeStamp, x.SensorName, forcedValue)
                 : x);
-
-    private class MeasurementDataWrapper(IMeasurementData original, string forcedValue) : IMeasurementData
-    {
-        public DateTime TimeStamp => original.TimeStamp;
-
-        public string SensorName => original.SensorName;
-
-        public Type ValueType => typeof(string);
-
-        public object GetRawValue() => forcedValue;
-    }
     #endregion
 
     #region private fields
