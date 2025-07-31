@@ -31,8 +31,8 @@ public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IData
 
         DateTime meanTime;
 
-        if (input.Count() != 0)
-            meanTime = input.ElementAt(input.Count() / 2).TimeStamp;
+        if (input.Any())
+            meanTime = input.Min(x => x.TimeStamp);
         else
             meanTime = DateTime.UtcNow;
 
