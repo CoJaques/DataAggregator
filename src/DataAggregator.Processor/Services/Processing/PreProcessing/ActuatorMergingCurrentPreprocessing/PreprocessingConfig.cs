@@ -1,9 +1,11 @@
-﻿namespace DataAggregator.Processor.Configuration;
+﻿using DataAggregator.Processor.Services.Processing.Abstraction;
+
+namespace DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 
 /// <summary>
 /// Configuration for preprocessing operations including Z-score normalization.
 /// </summary>
-public class PreprocessingConfig
+public class PreprocessingConfig : IProcessorConfiguration
 {
     /// <summary>
     /// Gets or sets a value indicating whether Z-score normalization is enabled.

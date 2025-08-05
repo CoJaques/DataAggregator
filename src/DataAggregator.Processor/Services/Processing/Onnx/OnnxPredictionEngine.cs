@@ -1,4 +1,6 @@
 using DataAggregator.Collector.Shared.Models;
+using DataAggregator.Processor.Services.Processing.Abstraction;
+using DataAggregator.Processor.Services.Processing.Onnx;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Serilog;
@@ -8,37 +10,38 @@ namespace DataAggregator.Processor.Services.Prediction;
 /// <summary>
 /// Implementation of ONNX prediction engine.
 /// </summary>
-public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
+public class OnnxPredictionEngine(OnnxPredictionConfig config) : IDataProcessor, IDisposable
 {
     #region Private fields
 
-    private readonly Dictionary<string, InferenceSession> _modelCache = [];
+    private static readonly Dictionary<string, InferenceSession> _modelCache = [];
 
     #endregion
 
     #region Public methods
 
     /// <inheritdoc />
-    public async Task<IEnumerable<IMeasurementData>> PredictAsync(
-    string modelPath,
-    IEnumerable<IMeasurementData> inputData)
+    public async Task<IEnumerable<IMeasurementData>> ProcessAsync(
+    IEnumerable<IMeasurementData> input)
     {
         try
         {
             // Load the model or get the existing session
+            string executablePath = AppContext.BaseDirectory;
+            string modelPath = Path.Combine(executablePath, config.ModelPath);
             InferenceSession session = LoadOrGetModel(modelPath);
 
-            if (!inputData.Any())
+            if (!input.Any())
             {
-                Log.Information($"No inputs data provided to model for model {modelPath}");
+                Log.Information($"No inputs data provided to model for model {config.ModelPath}");
                 return Array.Empty<IMeasurementData>();
             }
 
-            ValidateInputData(session, inputData);
+            ValidateInputData(session, input);
 
             // Prepare the inputs for the inference session
             var inputs = new List<NamedOnnxValue>();
-            foreach (IMeasurementData data in inputData)
+            foreach (IMeasurementData data in input)
             {
                 inputs.Add(CreateNamedOnnxValue(data));
             }
@@ -59,7 +62,7 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
 
             // Prepare the list to store output measurements
             var outputMeasurements = new List<IMeasurementData>();
-            DateTime processedDataTime = inputData.First().TimeStamp;
+            DateTime processedDataTime = input.First().TimeStamp;
 
             // Process each filtered result to convert it into measurement data
             foreach (DisposableNamedOnnxValue? result in filteredResults)
@@ -69,13 +72,12 @@ public class OnnxPredictionEngine : IOnnxPredictionEngine, IDisposable
                 outputMeasurements.AddRange(measurementData);
             }
 
-            // Log the completion of the prediction
-            Log.Debug("Prediction completed for model {ModelPath} with {OutputCount} outputs", modelPath, outputMeasurements.Count);
+            Log.Debug("Prediction completed for model {ModelPath} with {OutputCount} outputs", config.ModelPath, outputMeasurements.Count);
             return await Task.FromResult(outputMeasurements);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error during prediction with model {ModelPath}", modelPath);
+            Log.Error(ex, "Error during prediction with model {ModelPath}", config.ModelPath);
             throw;
         }
     }

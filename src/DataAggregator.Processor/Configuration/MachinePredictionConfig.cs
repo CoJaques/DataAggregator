@@ -1,4 +1,6 @@
-﻿namespace DataAggregator.Processor.Configuration;
+﻿using DataAggregator.Processor.Services.Processing.Factory;
+
+namespace DataAggregator.Processor.Configuration;
 
 /// <summary>
 /// Configuration for a specific machine prediction.
@@ -16,32 +18,27 @@ public class MachinePredictionConfig
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the path to the ONNX model file.
-    /// </summary>
-    public string ModelPath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the preprocessing strategy name.
-    /// </summary>
-    public string PreprocessingStrategy { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the list of input sensor names.
     /// </summary>
     public List<string> InputSensors { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the window size in seconds for data collection.
+    /// Gets or sets a value indicating whether Window size in seconds if true, otherwise in elements number.
     /// </summary>
-    public int WindowSizeSeconds { get; set; } = 60;
+    public bool WindowSizeInSeconds { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the window size unit depends on WindowSizeInSeconds property.
+    /// </summary>
+    public int WindowSize { get; set; } = 60;
 
     /// <summary>
     /// Gets or sets the cycle interval in seconds for this machine.
     /// </summary>
-    public int CycleIntervalSeconds { get; set; } = 1;
+    public double CycleIntervalSeconds { get; set; } = 1;
 
     /// <summary>
-    /// Gets or sets the preprocessing configuration for Z-score normalization.
+    /// Gets or sets the processing pipeline for this machine.
     /// </summary>
-    public PreprocessingConfig Preprocessing { get; set; } = new();
+    public List<ProcessorDescription> ProcessingPipeline { get; set; } = new();
 }
