@@ -1,123 +1,53 @@
 using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services.DataStorage;
-using DataAggregator.Processor.Services.PreProcessing;
+using DataAggregator.Processor.Services.Processing.Abstraction;
+using DataAggregator.Processor.Services.Processing.Factory;
 using DataAggregator.Processor.Services.Registration;
 using DataAggregator.Shared.DTOs;
 using Serilog;
 
 namespace DataAggregator.Processor.Services.Prediction;
 
-/// <summary>
-/// Processor for machine prediction operations.
-/// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="MachinePredictionProcessor"/> class.
-/// </remarks>
-/// <param name="influxRepository">The InfluxDB repository.</param>
-/// <param name="registrationClient">The registration service client.</param>
-/// <param name="predictionEngine">The ONNX prediction engine.</param>
-/// <param name="strategyFactory">The preprocessing strategy factory.</param>
+/// <inheritdoc/>
 public class MachinePredictionProcessor(
     IDataRepository influxRepository,
     IRegistrationServiceClient registrationClient,
-    IOnnxPredictionEngine predictionEngine,
-    IPreprocessingStrategyFactory strategyFactory) : IMachinePredictionProcessor
+    IDataProcessorFactory processorFactory) : IMachinePredictionProcessor
 {
-    #region Private fields
-
-    // Track the last endpoint used to avoid unnecessary reinitializations
-    private string? _lastEndpoint;
-
-    #endregion
-
-    #region Public methods
-
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public async Task ProcessAsync(MachinePredictionConfig config)
     {
         try
         {
             Log.Debug("Starting prediction process for machine {MachineName}", config.MachineName);
 
-            // Get collector info from registration service
-            CollectorInfoDto? collectorInfo = await registrationClient.GetCollectorInfoAsync(config.MachineName);
+            CollectorInfoDto? collectorInfo = await FetchCollectorInfo(config.MachineName);
+            if (collectorInfo == null) return;
 
-            if (collectorInfo == null)
-            {
-                Log.Warning("Collector info not found for machine {MachineName}", config.MachineName);
-                return;
-            }
+            List<SensorInfoDto>? requestedSensors = ValidateAndGetRequestedSensors(config, collectorInfo);
+            if (requestedSensors == null) return;
 
-            // Validate that all required sensors are available
-            var availableSensors = collectorInfo.Sensors.ToDictionary(s => s.SensorName, s => s);
-            var requestedSensors = config.InputSensors.Where(s => availableSensors.ContainsKey(s)).ToList();
+            InitializeRepositoryIfNeeded(collectorInfo);
 
-            if (requestedSensors.Count != config.InputSensors.Count)
-            {
-                IEnumerable<string> missingSensors = config.InputSensors.Except(requestedSensors);
-                Log.Warning(
-                    "Missing sensors for machine {MachineName}: {MissingSensors}",
-                    config.MachineName,
-                    string.Join(", ", missingSensors));
-
-                if (requestedSensors.Count == 0)
-                {
-                    Log.Error("No valid sensors found for machine {MachineName}", config.MachineName);
-                    return;
-                }
-            }
-
-            // Initialize InfluxDB repository only if endpoint changed
-            if (_lastEndpoint != collectorInfo.AssignedInfluxEndpoint.Endpoint)
-            {
-                influxRepository.InitializeAsync(
-                    collectorInfo.AssignedInfluxEndpoint.Endpoint,
-                    collectorInfo.AssignedInfluxEndpoint.Token);
-
-                _lastEndpoint = collectorInfo.AssignedInfluxEndpoint.Endpoint;
-                Log.Debug("Reinitialized InfluxDB connection with new endpoint: {Endpoint}", _lastEndpoint);
-            }
-
-            // Get sensor info for requested sensors
-            var requestedSensorInfos = requestedSensors
-                .Select(sensorName => availableSensors[sensorName])
-                .ToList();
-
-            // Fetch data window with sensor type information
-            List<IMeasurementData> measurements = await FetchDataWindowAsync(config, requestedSensorInfos);
-
-            if (measurements.Count == 0)
+            IEnumerable<IReadOnlyList<IMeasurementData>> measurements = await FetchDataWindowAsync(config, requestedSensors);
+            if (!measurements.Any())
             {
                 Log.Warning("No measurements found for machine {MachineName} in the specified time window", config.MachineName);
                 return;
             }
 
-            // Preprocess data using strategy
-            IEnumerable<IMeasurementData> preprocessedData = PreprocessDataAsync(measurements, config);
-
-            if (preprocessedData == null || !preprocessedData.Any())
+            if (!BuildPipelineIfNeeded(config))
             {
-                Log.Warning("Data preprocessing failed for machine {MachineName}", config.MachineName);
+                Log.Error("Failed to build processing pipeline for machine {MachineName}", config.MachineName);
                 return;
             }
 
-            // Perform prediction
-            string fullPath = Path.Combine(AppContext.BaseDirectory, config.ModelPath);
-            IEnumerable<IMeasurementData> predictions = await predictionEngine.PredictAsync(fullPath, preprocessedData);
+            IEnumerable<IMeasurementData>? processedData = await RunPipelineAsync(measurements, config.MachineName);
+            if (processedData == null || !processedData.Any()) return;
 
-            if (predictions == null || !predictions.Any())
-            {
-                Log.Warning("No predictions returned for machine {MachineName}", config.MachineName);
-                return;
-            }
-
-            // Write prediction to InfluxDB
-            await influxRepository.WriteMeasurementAsync(config.MachineName, predictions);
-
-            Log.Information(
-                "Prediction completed for machine {MachineName}",
-                config.MachineName);
+            await influxRepository.WriteMeasurementAsync(config.MachineName, processedData);
+            Log.Information("Prediction pipeline completed for machine {MachineName}", config.MachineName);
         }
         catch (Exception ex)
         {
@@ -126,49 +56,172 @@ public class MachinePredictionProcessor(
         }
     }
 
-    #endregion
-
     #region Private methods
-
-    private async Task<List<IMeasurementData>> FetchDataWindowAsync(MachinePredictionConfig config, List<SensorInfoDto> sensors)
+    private async Task<CollectorInfoDto?> FetchCollectorInfo(string machineName)
     {
-        DateTime endTime = DateTime.UtcNow;
-        DateTime startTime = endTime.AddSeconds(-config.WindowSizeSeconds);
-
-        return await influxRepository.QueryMeasurementsAsync(
-            config.MachineName,
-            startTime,
-            endTime,
-            sensors);
+        CollectorInfoDto? collectorInfo = await registrationClient.GetCollectorInfoAsync(machineName);
+        if (collectorInfo == null)
+            Log.Warning("Collector info not found for machine {MachineName}", machineName);
+        return collectorInfo;
     }
 
-    private IEnumerable<IMeasurementData> PreprocessDataAsync(IEnumerable<IMeasurementData> measurements, MachinePredictionConfig config)
+    private List<SensorInfoDto>? ValidateAndGetRequestedSensors(MachinePredictionConfig config, CollectorInfoDto collectorInfo)
     {
-        try
+        var availableSensors = collectorInfo.Sensors.ToDictionary(s => s.SensorName);
+        var requestedSensors = config.InputSensors.Where(availableSensors.ContainsKey).ToList();
+
+        if (requestedSensors.Count != config.InputSensors.Count)
         {
-            if (string.IsNullOrEmpty(config.PreprocessingStrategy))
+            IEnumerable<string> missing = config.InputSensors.Except(requestedSensors);
+            Log.Warning("Missing sensors for machine {MachineName}: {MissingSensors}", config.MachineName, string.Join(", ", missing));
+            if (requestedSensors.Count == 0)
             {
-                Log.Error("No preprocessing strategy configured for machine {MachineName}", config.MachineName);
-                return Array.Empty<IMeasurementData>();
+                Log.Error("No valid sensors found for machine {MachineName}", config.MachineName);
+                return null;
             }
-
-            IPreprocessingStrategy strategy = strategyFactory.CreateStrategy(config.PreprocessingStrategy);
-            IEnumerable<IMeasurementData> preprocessedData = strategy.PreprocessAsync(measurements, config);
-
-            Log.Debug(
-                "Preprocessed data for machine {MachineName} using strategy {Strategy}: {InputCount} inputs",
-                config.MachineName,
-                config.PreprocessingStrategy,
-                preprocessedData.Count());
-
-            return preprocessedData;
         }
-        catch (Exception ex)
+
+        return requestedSensors.Select(s => availableSensors[s]).ToList();
+    }
+
+    private void InitializeRepositoryIfNeeded(CollectorInfoDto collectorInfo)
+    {
+        if (_lastEndpoint != collectorInfo.AssignedInfluxEndpoint.Endpoint)
         {
-            Log.Error(ex, "Error preprocessing data for machine {MachineName}", config.MachineName);
+            influxRepository.Initialize(
+                collectorInfo.AssignedInfluxEndpoint.Endpoint,
+                collectorInfo.AssignedInfluxEndpoint.Token);
+            _lastEndpoint = collectorInfo.AssignedInfluxEndpoint.Endpoint;
+            Log.Debug("Reinitialized InfluxDB connection with new endpoint: {Endpoint}", _lastEndpoint);
+        }
+    }
+
+    private async Task<IReadOnlyList<IMeasurementData>> RunPipelineAsync(
+        IEnumerable<IReadOnlyList<IMeasurementData>> dataBlocks,
+        string machineName)
+    {
+        if (_pipelineProcessors is null || _pipelineProcessors.Count == 0)
+        {
+            Log.Error("No processing pipeline configured for machine {MachineName}", machineName);
             return Array.Empty<IMeasurementData>();
         }
+
+        var results = new List<IMeasurementData>();
+
+        foreach (IReadOnlyList<IMeasurementData> block in dataBlocks)
+        {
+            IEnumerable<IMeasurementData>? current = block;
+
+            foreach (IDataProcessor processor in _pipelineProcessors)
+            {
+                try
+                {
+                    current = await processor.ProcessAsync(current);
+                    if (current is null || !current.Any())
+                    {
+                        Log.Warning("Processor {Processor} returned no data for machine {MachineName} (block skipped)", processor.GetType().Name, machineName);
+                        current = null;
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Error in processor {Processor} for machine {MachineName} (block skipped)", processor.GetType().Name, machineName);
+                    current = null;
+                    break;
+                }
+            }
+
+            if (current is not null)
+            {
+                results.AddRange(current);
+            }
+        }
+
+        return results;
     }
 
+    private bool BuildPipelineIfNeeded(MachinePredictionConfig config)
+    {
+        if (_pipelineProcessors == null)
+        {
+            if (config.ProcessingPipeline == null)
+            {
+                Log.Error("No processing pipeline configured for machine {MachineName}", config.MachineName);
+                return false;
+            }
+
+            _pipelineProcessors = processorFactory.CreateProcessors(config.ProcessingPipeline);
+        }
+
+        return true;
+    }
+
+    private async Task<IEnumerable<IReadOnlyList<IMeasurementData>>> FetchDataWindowAsync(MachinePredictionConfig config, List<SensorInfoDto> sensors)
+    {
+        List<List<IMeasurementData>> measurements = [];
+
+        // If the window size is in secondes, simply query the measurements for the last N seconds.
+        if (config.WindowSizeInSeconds)
+        {
+            DateTime endTime = DateTime.UtcNow;
+            DateTime startTime = endTime.AddSeconds(-config.WindowSize);
+
+            List<IMeasurementData> datas = await influxRepository.QueryMeasurementsAsync(
+                config.MachineName,
+                startTime,
+                endTime,
+                sensors);
+
+            measurements.Add(datas);
+        }
+        else
+        {
+            // If we want to fetch the last N measurements, we must take inaccount the number of sensors
+            int windowSize = config.WindowSize * config.InputSensors.Count;
+
+            // Otherwise, query all the measurements since the last query, and slice it in windows size list
+            if (_lastQueryTime == DateTime.MinValue)
+            {
+                // For the first run, we assume we want all the element for the CycleIntervalSeconds period.
+                _lastQueryTime = DateTime.UtcNow.AddSeconds(-config.CycleIntervalSeconds);
+            }
+
+            List<IMeasurementData> datas = await influxRepository.QueryMeasurementsAsync(
+                config.MachineName,
+                _lastQueryTime,
+                DateTime.UtcNow,
+                sensors);
+
+            if (datas.Count < windowSize)
+                return measurements;
+
+            datas = [.. datas.OrderBy(d => d.TimeStamp)];
+
+            int fullBlockCount = datas.Count / windowSize;
+
+            // Slice the data into windows of size windowSize.
+            for (int i = 0; i < fullBlockCount; i++)
+            {
+                List<IMeasurementData> block = datas.GetRange(i * windowSize, windowSize);
+                measurements.Add(block);
+            }
+
+            // Set the last query time to the maximum timestamp of the fetched data complete block,
+            // so that the next query will only fetch new data.
+            int lastProcessedIndex = (fullBlockCount * windowSize) - 1;
+            _lastQueryTime = datas[lastProcessedIndex].TimeStamp;
+        }
+
+        Log.Debug("Fetched {Count} data blocks for machine {MachineName}", measurements.Count, config.MachineName);
+
+        return measurements;
+    }
+    #endregion
+
+    #region Private fields
+    private List<IDataProcessor>? _pipelineProcessors;
+    private string? _lastEndpoint;
+    private DateTime _lastQueryTime = DateTime.MinValue;
     #endregion
 }

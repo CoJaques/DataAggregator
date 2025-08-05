@@ -1,8 +1,9 @@
+using System.Text.Json;
 using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services;
 using DataAggregator.Processor.Services.DataStorage;
 using DataAggregator.Processor.Services.Prediction;
-using DataAggregator.Processor.Services.PreProcessing;
+using DataAggregator.Processor.Services.Processing.Factory;
 using DataAggregator.Processor.Services.Registration;
 using Serilog;
 
@@ -25,8 +26,18 @@ builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggr
 // Register health checks
 builder.Services.AddHealthChecks();
 
-// Configure prediction service
-builder.Services.Configure<PredictionServiceConfiguration>(builder.Configuration.GetSection("PredictionService"));
+// Configuration management
+string appSettingsJson = File.ReadAllText("appsettings.json");
+using var doc = JsonDocument.Parse(appSettingsJson);
+JsonElement predictionServiceElement = doc.RootElement.GetProperty("PredictionService");
+string json = predictionServiceElement.GetRawText();
+
+var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+options.Converters.Add(new ProcessorDescriptionJsonConverter());
+PredictionServiceConfiguration? predictionConfig = JsonSerializer.Deserialize<PredictionServiceConfiguration>(json, options);
+if (predictionConfig == null)
+    throw new Exception("Failed to deserialize PredictionServiceConfiguration");
+builder.Services.AddSingleton(predictionConfig);
 
 // Configure HTTP clients
 builder.Services.AddHttpClient<IRegistrationServiceClient, RegistrationServiceClient>("RegistrationClient", client =>
@@ -38,8 +49,7 @@ builder.Services.AddHttpClient<IRegistrationServiceClient, RegistrationServiceCl
 
 // Register services
 builder.Services.AddScoped<IDataRepository, InfluxV3Repository>();
-builder.Services.AddSingleton<IOnnxPredictionEngine, OnnxPredictionEngine>();
-builder.Services.AddSingleton<IPreprocessingStrategyFactory, PreprocessingStrategyFactory>();
+builder.Services.AddSingleton<IDataProcessorFactory, DataProcessorFactory>();
 builder.Services.AddScoped<IMachinePredictionProcessor, MachinePredictionProcessor>();
 
 // Register background service

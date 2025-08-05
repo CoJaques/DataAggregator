@@ -1,4 +1,4 @@
-using DataAggregator.Processor.Services.PreProcessing.ActuatorMergingCurrentPreprocessing;
+using DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 
 namespace DataAggregator.Processor.Tests.Services.PreProcessing;
 
