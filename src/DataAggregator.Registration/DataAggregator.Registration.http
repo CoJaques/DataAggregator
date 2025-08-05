@@ -1,6 +1,0 @@
-@DataAggregator.Registration_HostAddress = http://localhost:5137
-
-GET {{DataAggregator.Registration_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
