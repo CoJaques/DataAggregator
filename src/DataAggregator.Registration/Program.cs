@@ -34,19 +34,8 @@ if (!builder.Environment.IsDevelopment())
 }
 
 // Configure Entity Framework Core with PostgreSQL
-string? pgHost = builder.Configuration["PGHOST"];
-string? pgPort = builder.Configuration["PGPORT"];
-string? pgDb = builder.Configuration["PGDATABASE"];
-string? pgUser = builder.Configuration["PGUSER"];
-string? pgPassword = builder.Configuration["PGPASSWORD"];
-
-if (string.IsNullOrEmpty(pgHost) || string.IsNullOrEmpty(pgDb) || string.IsNullOrEmpty(pgUser) || string.IsNullOrEmpty(pgPassword))
-{
-    Log.Fatal("PostgreSQL environment variables are not properly configured.");
-    throw new InvalidOperationException("PostgreSQL environment variables are not properly configured.");
-}
-
-string connectionString = $"Host={pgHost};Port={pgPort};Database={pgDb};Username={pgUser};Password={pgPassword}";
+string connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in configuration.");
 
 builder.Services.AddDbContext<RegistrationDbContext>(options =>
     options.UseNpgsql(connectionString));
