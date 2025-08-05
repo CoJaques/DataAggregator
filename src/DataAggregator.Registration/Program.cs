@@ -4,6 +4,7 @@ using DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
 using DataAggregator.Registration.DeviceManagement.Services;
 using DataAggregator.Registration.InfluxService.Configuration;
 using DataAggregator.Registration.InfluxService.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -22,6 +23,17 @@ builder.Host.UseSerilog(); // Use Serilog as the logging provider
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator API", Version = "v1" }));
+
+// Configure forwarded headers for reverse proxy scenarios
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 
 // Configure Entity Framework Core with PostgreSQL
 string? pgHost = builder.Configuration["PGHOST"];
@@ -86,13 +98,11 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });
 }
-else
-{
-    app.UseHsts();
-}
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseForwardedHeaders(); // Use forwarded headers in production
+}
 
 app.MapControllers();
 app.MapHealthChecks("/health");

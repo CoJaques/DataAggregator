@@ -5,6 +5,7 @@ using DataAggregator.Processor.Services.DataStorage;
 using DataAggregator.Processor.Services.Prediction;
 using DataAggregator.Processor.Services.Processing.Factory;
 using DataAggregator.Processor.Services.Registration;
+using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,16 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator Processor API", Version = "v1" }));
+
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 
 // Register health checks
 builder.Services.AddHealthChecks();
@@ -68,8 +79,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseForwardedHeaders();
+}
+
 app.MapControllers();
 app.MapHealthChecks("/health");
 
