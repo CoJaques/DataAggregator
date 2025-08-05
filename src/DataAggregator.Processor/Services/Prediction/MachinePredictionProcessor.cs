@@ -215,10 +215,6 @@ public class MachinePredictionProcessor(
 
         Log.Debug("Fetched {Count} data blocks for machine {MachineName}", measurements.Count, config.MachineName);
 
-        // TODO CJS : REMOVE
-        Log.Debug("First element timestamp: {Timestamp}", measurements.First().First().TimeStamp);
-        Log.Debug("Last element timestamp: {Timestamp}", measurements.Last().Last().TimeStamp);
-
         return measurements;
     }
     #endregion
