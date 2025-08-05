@@ -44,7 +44,7 @@ public class MachinePredictionProcessor(
             }
 
             IEnumerable<IMeasurementData>? processedData = await RunPipelineAsync(measurements, config.MachineName);
-            if (processedData == null) return;
+            if (processedData == null || !processedData.Any()) return;
 
             await influxRepository.WriteMeasurementAsync(config.MachineName, processedData);
             Log.Information("Prediction pipeline completed for machine {MachineName}", config.MachineName);
