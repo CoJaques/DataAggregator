@@ -27,7 +27,7 @@ public class RegistrationService(HttpClient httpClient, string registrationEndpo
         {
             Log.Information("Registering collector {DeviceId} with registration service", config.DeviceName);
 
-            var sensorDtos = config.Sensors.Select(s => new SensorInfoDto(s.Name, s.Type, s.Unit, s.Metadata)).ToList();
+            var sensorDtos = config.Sensors.Select(s => new SensorInfoDto(s.Name, s.Type, s.Unit, s.Metadata, s.DataType)).ToList();
             var request = new DeviceRegistrationRequest(config.DeviceName, config.Location, config.HealthCheckEndpoint, sensorDtos);
 
             HttpResponseMessage response = await httpClient.PostAsJsonAsync(registrationEndpoint, request);
@@ -48,9 +48,14 @@ public class RegistrationService(HttpClient httpClient, string registrationEndpo
             Log.Information("Collector registration result: {IsSuccess}", result.IsSuccess);
             return result;
         }
+        catch (HttpRequestException ex)
+        {
+            Log.Error(ex, "Error registering collector, registration service unavailable");
+            return new DeviceRegistrationResponse(false, string.Empty, string.Empty);
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error registering collector");
+            Log.Error(ex, "Unexpected error during collector registration");
             return new DeviceRegistrationResponse(false, string.Empty, string.Empty);
         }
     }

@@ -27,7 +27,7 @@ public class CollectorService(
 
     private readonly SemaphoreSlim _processingLock = new(1, 1);
     private readonly ConcurrentQueue<IMeasurementData> _dataQueue = new();
-    private readonly TimeSpan _flushInterval = TimeSpan.FromSeconds(1); // Flush every 1 second
+    private readonly TimeSpan _flushInterval = TimeSpan.FromMilliseconds(configuration.FlushIntervalMilliseconds); // Flush every 1 second
 
     private bool _isRunning;
     private CancellationTokenSource? _cancellationTokenSource;

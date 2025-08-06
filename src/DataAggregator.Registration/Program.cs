@@ -4,6 +4,7 @@ using DataAggregator.Registration.DeviceManagement.Persistence.Repositories;
 using DataAggregator.Registration.DeviceManagement.Services;
 using DataAggregator.Registration.InfluxService.Configuration;
 using DataAggregator.Registration.InfluxService.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -11,9 +12,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog from appsettings.json
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration) // Read configuration from appsettings.json
-    .WriteTo.Console() // Write logs to the console
-    .Enrich.FromLogContext() // Add context to logs
+    .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
 builder.Host.UseSerilog(); // Use Serilog as the logging provider
@@ -23,20 +22,20 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator API", Version = "v1" }));
 
-// Configure Entity Framework Core with PostgreSQL
-string? pgHost = builder.Configuration["PGHOST"];
-string? pgPort = builder.Configuration["PGPORT"];
-string? pgDb = builder.Configuration["PGDATABASE"];
-string? pgUser = builder.Configuration["PGUSER"];
-string? pgPassword = builder.Configuration["PGPASSWORD"];
-
-if (string.IsNullOrEmpty(pgHost) || string.IsNullOrEmpty(pgDb) || string.IsNullOrEmpty(pgUser) || string.IsNullOrEmpty(pgPassword))
+// Configure forwarded headers for reverse proxy scenarios
+if (!builder.Environment.IsDevelopment())
 {
-    Log.Fatal("PostgreSQL environment variables are not properly configured.");
-    throw new InvalidOperationException("PostgreSQL environment variables are not properly configured.");
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
 }
 
-string connectionString = $"Host={pgHost};Port={pgPort};Database={pgDb};Username={pgUser};Password={pgPassword}";
+// Configure Entity Framework Core with PostgreSQL
+string connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in configuration.");
 
 builder.Services.AddDbContext<RegistrationDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -86,13 +85,11 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });
 }
-else
-{
-    app.UseHsts();
-}
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseForwardedHeaders(); // Use forwarded headers in production
+}
 
 app.MapControllers();
 app.MapHealthChecks("/health");
