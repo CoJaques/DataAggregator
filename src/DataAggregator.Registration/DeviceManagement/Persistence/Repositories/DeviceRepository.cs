@@ -30,7 +30,7 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
     }
 
     /// <inheritdoc/>
-    public async Task<Collector> CreateAsync(Collector device)
+    public async Task CreateAsync(Collector device)
     {
         try
         {
@@ -38,7 +38,6 @@ public class DeviceRepository(RegistrationDbContext context) : IDeviceRepository
             context.Devices.Add(device);
             await context.SaveChangesAsync();
             Log.Information("Device created successfully: {DeviceName}", device.DeviceName);
-            return device;
         }
         catch (Exception ex)
         {

@@ -5,6 +5,7 @@ using DataAggregator.Collector.Shared.DataStorage;
 using DataAggregator.Collector.Shared.DataStorage.Influx;
 using DataAggregator.Collector.Shared.LocalStorage;
 using DataAggregator.Collector.Shared.Registration;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -13,8 +14,6 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 // Configure Serilog from appsettings.json
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
-    .WriteTo.Console()
-    .Enrich.FromLogContext()
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -23,6 +22,16 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator Collector API", Version = "v1" }));
+
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 
 // Get collector type from configuration
 string? collectorType = builder.Configuration["CollectorType"];
@@ -37,11 +46,12 @@ if (string.IsNullOrEmpty(collectorType))
 SetupConfiguration(builder);
 
 // Configure HTTP clients
-builder.Services.AddHttpClient();
+string registrationBaseUrl = builder.Configuration["Collector:RegistrationService:BaseUrl"] ?? "http://localhost:5000";
+string registrationEndpoint = builder.Configuration["Collector:RegistrationService:Endpoint"] ?? "api/DeviceRegistration/register";
+
 builder.Services.AddHttpClient("RegistrationClient", client =>
 {
-    string registrationEndpoint = builder.Configuration["RegistrationService:Endpoint"] ?? "http://localhost:5001";
-    client.BaseAddress = new Uri(registrationEndpoint);
+    client.BaseAddress = new Uri(registrationBaseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
@@ -59,14 +69,6 @@ builder.Services.AddSingleton<RegistrationService>(sp =>
 {
     IHttpClientFactory httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
     HttpClient httpClient = httpClientFactory.CreateClient("RegistrationClient");
-
-    string? registrationEndpoint = builder.Configuration["Collector:RegistrationService:Endpoint"];
-
-    if (string.IsNullOrEmpty(registrationEndpoint))
-    {
-        Log.Warning("Registration service endpoint not configured, using default: http://localhost:5001/api/DeviceRegistration/register");
-        registrationEndpoint = "http://localhost:5001/api/DeviceRegistration/register";
-    }
 
     return new RegistrationService(httpClient, registrationEndpoint);
 });
@@ -117,8 +119,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseForwardedHeaders();
+}
+
 app.MapControllers();
 app.MapHealthChecks("/health");
 

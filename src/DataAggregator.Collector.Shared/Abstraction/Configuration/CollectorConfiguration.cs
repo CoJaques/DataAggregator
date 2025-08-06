@@ -24,4 +24,9 @@ public class CollectorConfiguration
     /// Gets or sets the list of sensors configured for this collector.
     /// </summary>
     public List<SensorConfig> Sensors { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the interval in milliseconds for flushing data to the time series database.
+    /// </summary>
+    public int FlushIntervalMilliseconds { get; set; } = 1000;
 }
