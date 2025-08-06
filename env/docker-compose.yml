@@ -1,0 +1,54 @@
+services:
+        postgres:
+                image: postgres:15
+                environment:
+                        POSTGRES_DB: dataaggregator
+                        POSTGRES_USER: admin
+                        POSTGRES_PASSWORD: password123
+                ports:
+                        - "5432:5432"
+                volumes:
+                        - postgres_data:/var/lib/postgresql/data
+
+        influxdb:
+                image: influxdb:3-core
+                ports:
+                        - "8181:8181"
+                environment:
+                        INFLUXDB3_AUTH_TOKEN: YOUR-TOKEN
+                command:
+                        - influxdb3
+                        - serve
+                        - --node-id=node0
+                        - --object-store=file
+                        - --data-dir=/var/lib/influxdb3
+                volumes:
+                        - influx_data:/var/lib/influxdb3
+
+        influxdb-ui:
+                image: influxdata/influxdb3-ui:1.0.0
+                container_name: influxdb3-explorer
+                ports:
+                        - "8888:80"
+                environment:
+                        INFLUXDB_URL: http://influxdb:8181
+                command: [ "--mode=admin" ]
+                depends_on:
+                        - influxdb
+
+        grafana:
+                image: grafana/grafana:latest
+                container_name: grafana
+                ports:
+                        - "3001:3000"
+                environment:
+                        - GF_SECURITY_ADMIN_USER=admin
+                        - GF_SECURITY_ADMIN_PASSWORD=admin
+                volumes:
+                        - grafana_data:/var/lib/grafana
+                        - ./volumes/grafana/data:/data/
+
+volumes:
+        postgres_data:
+        influx_data:
+        grafana_data:

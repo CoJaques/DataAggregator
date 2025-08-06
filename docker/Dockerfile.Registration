@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+COPY src/DataAggregator.Registration/*.csproj ./DataAggregator.Registration/
+COPY src/DataAggregator.Shared/*.csproj ./DataAggregator.Shared/
+
+RUN dotnet restore ./DataAggregator.Registration/DataAggregator.Registration.csproj
+
+COPY src/ ./
+WORKDIR /src/DataAggregator.Registration
+RUN dotnet publish -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "DataAggregator.Registration.dll"]
