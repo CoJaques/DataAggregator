@@ -19,7 +19,10 @@ public class StateDeductionPostProcessor(StateDeductionPostProcessorConfig confi
         string currentPredictedState = prediction?.GetRawValue() as string ?? string.Empty;
 
         if (_lastState == null)
-            return InitializeFirstState(inputList, currentPredictedState);
+        {
+            InitializeFirstState(currentPredictedState);
+            return Task.FromResult<IEnumerable<IMeasurementData>>(inputList);
+        }
 
         if (currentPredictedState == _lastState)
             return Task.FromResult<IEnumerable<IMeasurementData>>(inputList);
@@ -51,11 +54,10 @@ public class StateDeductionPostProcessor(StateDeductionPostProcessorConfig confi
 
     #region Private methods
 
-    private Task<IEnumerable<IMeasurementData>> InitializeFirstState(List<IMeasurementData> inputList, string state)
+    private void InitializeFirstState(string state)
     {
         _lastState = state;
         _pendingState = state;
-        return Task.FromResult<IEnumerable<IMeasurementData>>(inputList);
     }
 
     private Task<IEnumerable<IMeasurementData>> ConfirmPendingState()

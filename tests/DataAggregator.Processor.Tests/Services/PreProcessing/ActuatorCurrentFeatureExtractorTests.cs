@@ -11,22 +11,22 @@ public class ActuatorCurrentFeatureExtractorTests
         => _featureExtractor = new ActuatorCurrentFeatureExtractor(CreateValidPreprocessingConfig());
 
     [Fact]
-    public async Task ProcessAsync_ShouldReturnFifteenFeatures_WhenValidDataProvided()
+    public async Task ProcessAsync_ShouldReturnThirteenFeatures_WhenValidDataProvided()
     {
         var measurements = CreateTestMeasurements();
         var result = await _featureExtractor.ProcessAsync(measurements);
         Assert.NotNull(result);
-        Assert.Equal(15, result.Count());
+        Assert.Equal(13, result.Count());
     }
 
     [Fact]
-    public async Task ProcessAsync_ShouldReturnFourteenFeatures_WhenEmptyMeasurementsProvided()
+    public async Task ProcessAsync_ShouldReturnTwelvesFeatures_WhenEmptyMeasurementsProvided()
     {
         var measurements = new List<IMeasurementData>();
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(12, result.Count());
         Assert.All(result, feature => Assert.Equal(0.0f, (float)feature.GetRawValue()));
     }
 
@@ -38,7 +38,7 @@ public class ActuatorCurrentFeatureExtractorTests
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(12, result.Count());
         Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
         Assert.All(result, feature => Assert.False(float.IsInfinity((float)feature.GetRawValue())));
     }
@@ -55,7 +55,7 @@ public class ActuatorCurrentFeatureExtractorTests
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(12, result.Count());
         Assert.All(result, feature => Assert.Equal(0.0f, (float)feature.GetRawValue()));
     }
 
@@ -69,7 +69,7 @@ public class ActuatorCurrentFeatureExtractorTests
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(12, result.Count());
         Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
     }
 
@@ -92,7 +92,7 @@ public class ActuatorCurrentFeatureExtractorTests
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(12, result.Count());
         Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
         Assert.All(result, feature => Assert.False(float.IsInfinity((float)feature.GetRawValue())));
     }
