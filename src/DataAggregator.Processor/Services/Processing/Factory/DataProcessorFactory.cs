@@ -1,4 +1,3 @@
-using DataAggregator.Processor.Services.Prediction;
 using DataAggregator.Processor.Services.Processing.Abstraction;
 using DataAggregator.Processor.Services.Processing.Onnx;
 using DataAggregator.Processor.Services.Processing.PostProcessing.StateDeductionPostProcess;
