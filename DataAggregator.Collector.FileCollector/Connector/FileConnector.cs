@@ -37,10 +37,12 @@ public class FileConnector(FileConnectorConfiguration config) : IDataSourceConne
 
         foreach (string file in config.Files)
         {
-            if (!File.Exists(file))
+            string executablePath = AppContext.BaseDirectory;
+            string filePath = Path.Combine(executablePath, file);
+            if (!File.Exists(filePath))
                 continue;
 
-            var reader = new StreamReader(file);
+            var reader = new StreamReader(filePath);
             string? header = reader.ReadLine();
             if (header == null)
             {

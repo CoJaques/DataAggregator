@@ -3,6 +3,7 @@ using DataAggregator.Collector.FileCollector.Connector;
 using DataAggregator.Collector.OpenCNCapnProtoConnector.CapnProto;
 using DataAggregator.Collector.OpenCNCapnProtoConnector.OpenCN;
 using DataAggregator.Collector.Shared.Abstraction;
+using DataAggregator.Collector.Shared.Abstraction.Configuration;
 using DataAggregator.Collector.Shared.DataStorage;
 using DataAggregator.Collector.Shared.DataStorage.Influx;
 using DataAggregator.Collector.Shared.LocalStorage;
@@ -79,7 +80,7 @@ builder.Services.AddSingleton<RegistrationService>(sp =>
 builder.Services.AddSingleton<CollectorEndpointManager>(sp =>
 {
     RegistrationService registrationService = sp.GetRequiredService<RegistrationService>();
-    OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+    CollectorConfiguration config = sp.GetRequiredService<IOptions<CollectorConfiguration>>().Value;
     return new CollectorEndpointManager(registrationService, config);
 });
 
@@ -95,7 +96,7 @@ RegisterCollectorSpecificServices(builder, collectorType);
 
 builder.Services.AddSingleton<CollectorService>(sp =>
 {
-    OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
+    CollectorConfiguration config = sp.GetRequiredService<IOptions<CollectorConfiguration>>().Value;
     IDataSourceConnector dataSourceConnector = sp.GetRequiredService<IDataSourceConnector>();
     IDataRepository dataRepository = sp.GetRequiredService<IDataRepository>();
     CollectorEndpointManager initService = sp.GetRequiredService<CollectorEndpointManager>();
@@ -187,9 +188,13 @@ static void SetupConfiguration(WebApplicationBuilder builder)
     {
         case "OPENCN":
             builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration.GetSection("Collector"));
+            builder.Services.AddSingleton<IOptions<CollectorConfiguration>>(sp =>
+                sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>());
             break;
         case "FILE":
             builder.Services.Configure<FileConnectorConfiguration>(builder.Configuration.GetSection("Collector"));
+            builder.Services.AddSingleton<IOptions<CollectorConfiguration>>(sp =>
+                sp.GetRequiredService<IOptions<FileConnectorConfiguration>>());
             break;
         default:
             Log.Warning("Collector type not specified or unsupported, application will close");
