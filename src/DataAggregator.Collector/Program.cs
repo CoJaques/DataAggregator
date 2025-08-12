@@ -1,3 +1,5 @@
+using DataAggregator.Collector.FileCollector.Configuration;
+using DataAggregator.Collector.FileCollector.Connector;
 using DataAggregator.Collector.OpenCNCapnProtoConnector.CapnProto;
 using DataAggregator.Collector.OpenCNCapnProtoConnector.OpenCN;
 using DataAggregator.Collector.Shared.Abstraction;
@@ -186,6 +188,9 @@ static void SetupConfiguration(WebApplicationBuilder builder)
         case "OPENCN":
             builder.Services.Configure<OpenCnCollectorConfiguration>(builder.Configuration.GetSection("Collector"));
             break;
+        case "FILE":
+            builder.Services.Configure<FileConnectorConfiguration>(builder.Configuration.GetSection("Collector"));
+            break;
         default:
             Log.Warning("Collector type not specified or unsupported, application will close");
             throw new InvalidOperationException("Collector type not specified or unsupported.");
@@ -201,6 +206,13 @@ static void RegisterCollectorSpecificServices(WebApplicationBuilder builder, str
             {
                 OpenCnCollectorConfiguration config = sp.GetRequiredService<IOptions<OpenCnCollectorConfiguration>>().Value;
                 return new CapnProtoConnector(config);
+            });
+            break;
+        case "FILE":
+            builder.Services.AddSingleton<IDataSourceConnector>(sp =>
+            {
+                FileConnectorConfiguration config = sp.GetRequiredService<IOptions<FileConnectorConfiguration>>().Value;
+                return new FileConnector(config);
             });
             break;
         default:
