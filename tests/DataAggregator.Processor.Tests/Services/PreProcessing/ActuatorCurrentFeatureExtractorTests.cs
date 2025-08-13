@@ -8,7 +8,7 @@ public class ActuatorCurrentFeatureExtractorTests
     private readonly ActuatorCurrentFeatureExtractor _featureExtractor;
 
     public ActuatorCurrentFeatureExtractorTests()
-        => _featureExtractor = new ActuatorCurrentFeatureExtractor(CreateValidPreprocessingConfig());
+        => _featureExtractor = new ActuatorCurrentFeatureExtractor();
 
     [Fact]
     public async Task ProcessAsync_ShouldReturnThirteenFeatures_WhenValidDataProvided()
@@ -105,10 +105,4 @@ public class ActuatorCurrentFeatureExtractorTests
             new MeasurementData<float>(DateTime.UtcNow, "sensor1", 12.1f),
             new MeasurementData<float>(DateTime.UtcNow, "sensor2", 22.5f)
         ];
-
-    private static PreprocessingConfig CreateValidPreprocessingConfig() => new()
-    {
-        EnableZScoreNormalization = true,
-        NormalizationParameters = new Dictionary<string, float[]>()
-    };
 }

@@ -19,10 +19,7 @@ public class DataProcessorFactory : IDataProcessorFactory
             switch (desc.Name.ToLowerInvariant())
             {
                 case "actuatorcurrent":
-                    if (desc.Configuration is PreprocessingConfig preConfig)
-                        processors.Add(new ActuatorCurrentFeatureExtractor(preConfig));
-                    else
-                        throw new ArgumentException("Invalid config type for actuatorcurrent");
+                    processors.Add(new ActuatorCurrentFeatureExtractor());
                     break;
                 case "onnxprediction":
                     if (desc.Configuration is OnnxPredictionConfig onnxConfig)

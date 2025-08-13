@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using DataAggregator.Processor.Services.Processing.Abstraction;
 using DataAggregator.Processor.Services.Processing.Onnx;
 using DataAggregator.Processor.Services.Processing.PostProcessing.StateDeductionPostProcess;
-using DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
 
 namespace DataAggregator.Processor.Services.Processing.Factory;
 
@@ -21,7 +20,6 @@ public class ProcessorDescriptionJsonConverter : JsonConverter<ProcessorDescript
         JsonElement configElement = root.GetProperty("Configuration");
         IProcessorConfiguration? config = name.ToLowerInvariant() switch
         {
-            "actuatorcurrent" => configElement.Deserialize<PreprocessingConfig>(options),
             "onnxprediction" => configElement.Deserialize<OnnxPredictionConfig>(options),
             "statedeductionpostprocessor" => configElement.Deserialize<StateDeductionPostProcessorConfig>(options),
             _ => null,
