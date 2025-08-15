@@ -22,6 +22,11 @@ public class DataProcessorFactoryTests
             new ProcessorDescription
             {
                 Name = "actuatorcurrent",
+                Configuration = new PreprocessingConfig
+                {
+                    EnableZScoreNormalization = true,
+                    NormalizationParameters = new Dictionary<string, float[]>()
+                }
             },
             new ProcessorDescription
             {
@@ -83,7 +88,7 @@ public class DataProcessorFactoryTests
         // Arrange
         var pipeline = new List<ProcessorDescription>
         {
-            new ProcessorDescription { Name = "",}
+            new ProcessorDescription { Name = "", Configuration = new PreprocessingConfig() }
         };
 
         // Act & Assert

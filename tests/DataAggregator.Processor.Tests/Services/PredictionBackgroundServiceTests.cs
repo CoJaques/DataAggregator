@@ -126,6 +126,11 @@ public class PredictionBackgroundServiceTests : IDisposable
                         new ProcessorDescription
                         {
                             Name = "actuatorcurrent",
+                            Configuration = new PreprocessingConfig
+                            {
+                                EnableZScoreNormalization = true,
+                                NormalizationParameters = new Dictionary<string, float[]>()
+                            }
                         }
                     },
                 },
@@ -141,6 +146,11 @@ public class PredictionBackgroundServiceTests : IDisposable
                         new ProcessorDescription
                         {
                             Name = "actuatorcurrent",
+                            Configuration = new PreprocessingConfig
+                            {
+                                EnableZScoreNormalization = true,
+                                NormalizationParameters = new Dictionary<string, float[]>()
+                            }
                         }
                     },
                 }
