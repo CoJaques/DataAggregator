@@ -23,7 +23,7 @@ public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IData
     /// <returns>Feature vector as dictionary mapping feature names to values for a single sample.</returns>
     public Task<IEnumerable<IMeasurementData>> ProcessAsync(IEnumerable<IMeasurementData> input)
     {
-        // Extract the 14 features from measurements
+        // Extract the 5 features from measurements
         float[] features = ExtractFeatures(input);
 
         // Apply Z-score normalization if enabled
