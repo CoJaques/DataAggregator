@@ -11,7 +11,8 @@ namespace DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMer
 /// <remarks>
 /// Initializes a new instance of the <see cref="ActuatorCurrentFeatureExtractor"/> class.
 /// </remarks>
-public class ActuatorCurrentFeatureExtractor() : IDataProcessor
+/// <param name="config">The configuration of the processor.</param>
+public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IDataProcessor
 {
     #region Public methods
 
@@ -25,6 +26,9 @@ public class ActuatorCurrentFeatureExtractor() : IDataProcessor
         // Extract the 14 features from measurements
         float[] features = ExtractFeatures(input);
 
+        // Apply Z-score normalization if enabled
+        float[] normalizedFeatures = NormalizeFeaturesAsync(features, config);
+
         DateTime meanTime;
 
         if (input.Any())
@@ -34,18 +38,18 @@ public class ActuatorCurrentFeatureExtractor() : IDataProcessor
 
         var result = new List<IMeasurementData>
         {
-            new MeasurementData<float>(meanTime, "GlobalActivityRatio", features[0]),
-            new MeasurementData<float>(meanTime, "GlobalChangeDensity", features[1]),
-            new MeasurementData<float>(meanTime, "InterAxisMeanCorrelation", features[2]),
-            new MeasurementData<float>(meanTime, "InterAxisMaxCorrelation", features[3]),
-            new MeasurementData<float>(meanTime, "InterAxisCorrelationVariance", features[4]),
-            new MeasurementData<float>(meanTime, "AxisSynchronization", features[5]),
-            new MeasurementData<float>(meanTime, "AxisLoadBalance", features[6]),
-            new MeasurementData<float>(meanTime, "TemporalStability", features[7]),
-            new MeasurementData<float>(meanTime, "GlobalSkewness", features[8]),
-            new MeasurementData<float>(meanTime, "CoefficientOfVariation", features[9]),
-            new MeasurementData<float>(meanTime, "NormalizedIqrMedian", features[10]),
-            new MeasurementData<float>(meanTime, "NormalizedIqrMean", features[11]),
+            new MeasurementData<float>(meanTime, "GlobalActivityRatio", normalizedFeatures[0]),
+            new MeasurementData<float>(meanTime, "GlobalChangeDensity", normalizedFeatures[1]),
+            new MeasurementData<float>(meanTime, "InterAxisMeanCorrelation", normalizedFeatures[2]),
+            new MeasurementData<float>(meanTime, "InterAxisMaxCorrelation", normalizedFeatures[3]),
+            new MeasurementData<float>(meanTime, "InterAxisCorrelationVariance", normalizedFeatures[4]),
+            new MeasurementData<float>(meanTime, "AxisSynchronization", normalizedFeatures[5]),
+            new MeasurementData<float>(meanTime, "AxisLoadBalance", normalizedFeatures[6]),
+            new MeasurementData<float>(meanTime, "TemporalStability", normalizedFeatures[7]),
+            new MeasurementData<float>(meanTime, "GlobalSkewness", normalizedFeatures[8]),
+            new MeasurementData<float>(meanTime, "CoefficientOfVariation", normalizedFeatures[9]),
+            new MeasurementData<float>(meanTime, "NormalizedIqrMedian", normalizedFeatures[10]),
+            new MeasurementData<float>(meanTime, "NormalizedIqrMean", normalizedFeatures[11]),
             new MeasurementData<string>(meanTime, "Label", string.Empty),
         };
 
@@ -230,6 +234,41 @@ public class ActuatorCurrentFeatureExtractor() : IDataProcessor
         return segmentVars.Count > 1 && segmentVars.Average() > 0
             ? 1 - (MathUtils.StandardDeviation(segmentVars) / segmentVars.Average())
             : 1f;
+    }
+
+    private float[] NormalizeFeaturesAsync(float[] features, PreprocessingConfig preprocessing)
+    {
+        if (!preprocessing.EnableZScoreNormalization)
+        {
+            return features;
+        }
+
+        string[] featureNames =
+        [
+            "GlobalActivityRatio", "GlobalChangeDensity", "InterAxisMeanCorrelation",
+            "InterAxisMaxCorrelation", "InterAxisCorrelationVariance", "AxisSynchronization",
+            "AxisLoadBalance", "TemporalStability", "GlobalSkewness",
+            "CoefficientOfVariation", "NormalizedIqrMedian", "NormalizedIqrMean",
+        ];
+
+        float[] normalized = new float[features.Length];
+
+        for (int i = 0; i < features.Length && i < featureNames.Length; i++)
+        {
+            string featureName = featureNames[i];
+            if (preprocessing.NormalizationParameters.TryGetValue(featureName, out float[]? parameters) && parameters.Length >= 2)
+            {
+                float mean = parameters[0];
+                float std = parameters[1];
+                normalized[i] = std > 1e-6f ? (features[i] - mean) / std : features[i];
+            }
+            else
+            {
+                normalized[i] = features[i]; // No normalization if parameters not found
+            }
+        }
+
+        return normalized;
     }
 
     #endregion
