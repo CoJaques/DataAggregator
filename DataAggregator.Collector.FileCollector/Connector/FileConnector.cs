@@ -136,7 +136,8 @@ public class FileConnector(FileConnectorConfiguration config) : IDataSourceConne
             DateTime timestamp = now - TimeSpan.FromMilliseconds(intervalMs * (linesToProvide - 1 - i));
             foreach (SensorConfig sensor in config.Sensors)
             {
-                int colIdx = _sensorNames.FindIndex(n => n == sensor.Name);
+                int colIdx = _sensorNames.FindIndex(n =>
+                    string.Equals(n, sensor.Name, StringComparison.OrdinalIgnoreCase));
 
                 if (colIdx == -1 || colIdx >= row.Length)
                     continue;
