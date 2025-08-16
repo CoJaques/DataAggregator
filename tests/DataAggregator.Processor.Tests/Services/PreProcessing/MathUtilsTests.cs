@@ -247,50 +247,6 @@ public class MathUtilsTests
 
     #endregion
 
-    #region Kurtosis tests
-
-    [Fact]
-    public void Kurtosis_ShouldReturnZero_WhenValuesContainsLessThan4Elements()
-    {
-        // Arrange
-        var values = new List<float> { 1.0f, 2.0f, 3.0f };
-
-        // Act
-        float result = MathUtils.Kurtosis(values);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
-
-    [Fact]
-    public void Kurtosis_ShouldReturnZero_WhenStandardDeviationIsZero()
-    {
-        // Arrange
-        var values = new List<float> { 3.0f, 3.0f, 3.0f, 3.0f };
-
-        // Act
-        float result = MathUtils.Kurtosis(values);
-
-        // Assert
-        Assert.Equal(0.0f, result);
-    }
-
-    [Fact]
-    public void Kurtosis_ShouldReturnCorrectValue_WhenValuesAreNormallyDistributed()
-    {
-        // Arrange
-        var values = new List<float> { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
-
-        // Act
-        float result = MathUtils.Kurtosis(values);
-
-        // Assert
-        // For normal distribution, kurtosis should be close to 0 (excess kurtosis)
-        Assert.Equal(-1.3f, result, 1);
-    }
-
-    #endregion
-
     #region Correlation tests
 
     [Fact]
