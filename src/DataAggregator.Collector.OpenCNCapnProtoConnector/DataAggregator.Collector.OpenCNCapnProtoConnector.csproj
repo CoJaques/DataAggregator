@@ -10,7 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="configuration-example.json">
+      <Content Include="configuration-example-CapnpConnector.json">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
