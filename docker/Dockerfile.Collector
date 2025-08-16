@@ -7,6 +7,7 @@ COPY lib /lib
 COPY src/DataAggregator.Collector/*.csproj ./DataAggregator.Collector/
 COPY src/DataAggregator.Shared/*.csproj ./DataAggregator.Shared/
 COPY src/DataAggregator.Collector.OpenCNCapnProtoConnector/*.csproj ./DataAggregator.Collector.OpenCNCapnProtoConnector/
+COPY src/DataAggregator.Collector.FileCollector/*.csproj ./DataAggregator.Collector.FileCollector/
 
 RUN dotnet restore ./DataAggregator.Collector/DataAggregator.Collector.App.csproj --configfile /NuGet.config
 

@@ -1,7 +1,6 @@
 using DataAggregator.Processor.Configuration;
 using DataAggregator.Processor.Services.Processing.Factory;
 using DataAggregator.Processor.Services.Processing.PreProcessing.ActuatorMergingCurrentPreprocessing;
-using DataAggregator.Processor.Services.Prediction;
 using DataAggregator.Processor.Services.Processing.PostProcessing.StateDeductionPostProcess;
 using System.Collections.Generic;
 using DataAggregator.Processor.Services.Processing.Onnx;

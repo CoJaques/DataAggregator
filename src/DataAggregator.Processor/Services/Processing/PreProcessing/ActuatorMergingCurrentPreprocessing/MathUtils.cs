@@ -85,32 +85,6 @@ public static class MathUtils
     }
 
     /// <summary>
-    /// Calculates the kurtosis of a collection of values.
-    /// </summary>
-    /// <param name="values">Collection of float values.</param>
-    /// <returns>Kurtosis value.</returns>
-    public static float Kurtosis(IEnumerable<float> values)
-    {
-        if (values == null || values.Count() < 4)
-        {
-            return 0.0f;
-        }
-
-        var valuesList = values.ToList();
-        float mean = valuesList.Average();
-        float std = StandardDeviation(valuesList);
-
-        if (std == 0)
-        {
-            return 0.0f;
-        }
-
-        double kurt = valuesList.Select(x => Math.Pow((x - mean) / std, 4)).Average() - 3;
-
-        return (float)kurt;
-    }
-
-    /// <summary>
     /// Calculates the correlation coefficient between two collections of values.
     /// </summary>
     /// <param name="x">First collection of values.</param>
