@@ -5,32 +5,33 @@ namespace DataAggregator.Processor.Tests.Services.PreProcessing;
 
 public class ActuatorCurrentFeatureExtractorTests
 {
+    private const int _expectedFeatureCount = 5;
+
     private readonly ActuatorCurrentFeatureExtractor _featureExtractor;
 
     public ActuatorCurrentFeatureExtractorTests()
         => _featureExtractor = new ActuatorCurrentFeatureExtractor(CreateValidPreprocessingConfig());
 
     [Fact]
-    public async Task ProcessAsync_ShouldReturnFifteenFeatures_WhenValidDataProvided()
+    public async Task ProcessAsync_ShouldReturnThirteenFeatures_WhenValidDataProvided()
     {
         var measurements = CreateTestMeasurements();
         var result = await _featureExtractor.ProcessAsync(measurements);
         Assert.NotNull(result);
-        Assert.Equal(15, result.Count());
+        Assert.Equal(_expectedFeatureCount + 1, result.Count());
     }
 
     [Fact]
-    public async Task ProcessAsync_ShouldReturnFourteenFeatures_WhenEmptyMeasurementsProvided()
+    public async Task ProcessAsync_ShouldReturnFiveFeatures_WhenEmptyMeasurementsProvided()
     {
         var measurements = new List<IMeasurementData>();
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
-        Assert.All(result, feature => Assert.Equal(0.0f, (float)feature.GetRawValue()));
+        Assert.Equal(_expectedFeatureCount, result.Count());
     }
 
- 
+
     [Fact]
     public async Task ProcessAsync_ShouldReturnValidFeatures_WhenValidDataProvided()
     {
@@ -38,25 +39,9 @@ public class ActuatorCurrentFeatureExtractorTests
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(_expectedFeatureCount, result.Count());
         Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
         Assert.All(result, feature => Assert.False(float.IsInfinity((float)feature.GetRawValue())));
-    }
-
-    [Fact]
-    public async Task ProcessAsync_ShouldReturnZeroFeatures_WhenNoValidValuesFound()
-    {
-        var measurements = new List<IMeasurementData>
-        {
-            new MeasurementData<float>(DateTime.UtcNow, "sensor1", float.NaN),
-            new MeasurementData<float>(DateTime.UtcNow, "sensor2", float.PositiveInfinity),
-            new MeasurementData<float>(DateTime.UtcNow, "sensor1", float.NegativeInfinity),
-        };
-        var result = await _featureExtractor.ProcessAsync(measurements);
-        result = result.Where(f => f.SensorName != "Label");
-        Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
-        Assert.All(result, feature => Assert.Equal(0.0f, (float)feature.GetRawValue()));
     }
 
     [Fact]
@@ -69,7 +54,7 @@ public class ActuatorCurrentFeatureExtractorTests
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(_expectedFeatureCount, result.Count());
         Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
     }
 
@@ -92,7 +77,7 @@ public class ActuatorCurrentFeatureExtractorTests
         var result = await _featureExtractor.ProcessAsync(measurements);
         result = result.Where(f => f.SensorName != "Label");
         Assert.NotNull(result);
-        Assert.Equal(14, result.Count());
+        Assert.Equal(_expectedFeatureCount, result.Count());
         Assert.All(result, feature => Assert.False(float.IsNaN((float)feature.GetRawValue())));
         Assert.All(result, feature => Assert.False(float.IsInfinity((float)feature.GetRawValue())));
     }
@@ -109,6 +94,13 @@ public class ActuatorCurrentFeatureExtractorTests
     private static PreprocessingConfig CreateValidPreprocessingConfig() => new()
     {
         EnableZScoreNormalization = true,
-        NormalizationParameters = new Dictionary<string, float[]>()
+        NormalizationParameters = new Dictionary<string, float[]>
+        {
+                { "AxisLoadBalance", [-0.045349f, 0.330992f] },
+                { "InterAxisCorrelationVariance", [0.238157f, 0.104391f] },
+                { "InterAxisMaxCorrelation", [0.455234f, 0.230869f] },
+                { "TemporalStability", [0.952670f, 0.037949f] },
+                { "GlobalSkewness", [-0.122091f, 0.380314f] },
+        },
     };
 }

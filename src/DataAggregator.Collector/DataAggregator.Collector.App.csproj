@@ -19,6 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\DataAggregator.Collector.FileCollector\DataAggregator.Collector.FileCollector.csproj" />
         <ProjectReference Include="..\DataAggregator.Collector.OpenCNCapnProtoConnector\DataAggregator.Collector.OpenCNCapnProtoConnector.csproj" />
         <ProjectReference Include="..\DataAggregator.Shared\DataAggregator.Shared.csproj" />
     </ItemGroup>

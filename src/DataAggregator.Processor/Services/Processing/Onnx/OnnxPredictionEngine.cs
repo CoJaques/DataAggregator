@@ -1,11 +1,10 @@
 using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Processor.Services.Processing.Abstraction;
-using DataAggregator.Processor.Services.Processing.Onnx;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Serilog;
 
-namespace DataAggregator.Processor.Services.Prediction;
+namespace DataAggregator.Processor.Services.Processing.Onnx;
 
 /// <summary>
 /// Implementation of ONNX prediction engine.

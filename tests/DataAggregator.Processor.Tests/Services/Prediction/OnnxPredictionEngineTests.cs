@@ -1,9 +1,4 @@
-using System.Reflection.Metadata;
 using DataAggregator.Collector.Shared.Models;
-using DataAggregator.Processor.Configuration;
-using DataAggregator.Processor.Services.Prediction;
-using Microsoft.ML.OnnxRuntime;
-using System.Threading.Tasks;
 using DataAggregator.Processor.Services.Processing.Onnx;
 
 namespace DataAggregator.Processor.Tests.Services.Prediction;
