@@ -4,6 +4,7 @@ using DataAggregator.Collector.Shared.Abstraction;
 using DataAggregator.Collector.Shared.Abstraction.Configuration;
 using DataAggregator.Collector.Shared.Models;
 using DataAggregator.Shared.Domain.DataType;
+using Serilog;
 
 namespace DataAggregator.Collector.FileCollector.Connector;
 
@@ -40,7 +41,10 @@ public class FileConnector(FileConnectorConfiguration config) : IDataSourceConne
             string executablePath = AppContext.BaseDirectory;
             string filePath = Path.Combine(executablePath, file);
             if (!File.Exists(filePath))
+            {
+                Log.Warning("File not found: {FilePath}", filePath);
                 continue;
+            }
 
             var reader = new StreamReader(filePath);
             string? header = reader.ReadLine();
