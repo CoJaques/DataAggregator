@@ -20,6 +20,8 @@ public class PredictionBackgroundService(
 
     private readonly Dictionary<string, Timer> _machineTimers = [];
     private readonly Dictionary<string, SemaphoreSlim> _machineLocks = [];
+    private readonly Dictionary<string, IServiceScope> _machineScopes = [];
+    private readonly Dictionary<string, IMachinePredictionProcessor> _machineProcessors = [];
 
     #endregion
 
@@ -73,6 +75,22 @@ public class PredictionBackgroundService(
         }
 
         _machineTimers.Clear();
+
+        // Dispose per-machine scopes (which own the scoped services, including processors and repositories)
+        foreach ((string _, IServiceScope scope) in _machineScopes)
+        {
+            try
+            {
+                scope.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error disposing scope for a machine");
+            }
+        }
+
+        _machineScopes.Clear();
+        _machineProcessors.Clear();
 
         await base.StopAsync(cancellationToken);
     }
@@ -135,11 +153,26 @@ public class PredictionBackgroundService(
                 _machineLocks[machineConfig.MachineName] = new SemaphoreSlim(1, 1);
             }
 
-            using IServiceScope scope = serviceProvider.CreateScope();
-            IMachinePredictionProcessor predictionProcessor
-                = scope.ServiceProvider.GetRequiredService<IMachinePredictionProcessor>();
+            // Create and retain a dedicated DI scope per machine to keep stateful services alive across ticks
+            IServiceScope scope = serviceProvider.CreateScope();
+            IMachinePredictionProcessor predictionProcessor =
+                scope.ServiceProvider.GetRequiredService<IMachinePredictionProcessor>();
 
-            var timer = new Timer(async _ => await ProcessMachineAsync(machineConfig, predictionProcessor), null, TimeSpan.Zero, interval);
+            _machineScopes[machineConfig.MachineName] = scope;
+            _machineProcessors[machineConfig.MachineName] = predictionProcessor;
+
+            var timer = new Timer(
+                async _ =>
+            {
+                // Retrieve the dedicated processor for this machine
+                if (_machineProcessors.TryGetValue(machineConfig.MachineName, out IMachinePredictionProcessor? proc))
+                {
+                    await ProcessMachineAsync(machineConfig, proc);
+                }
+            },
+                null,
+                TimeSpan.Zero,
+                interval);
 
             _machineTimers[machineConfig.MachineName] = timer;
 

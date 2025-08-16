@@ -23,7 +23,7 @@ public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IData
     /// <returns>Feature vector as dictionary mapping feature names to values for a single sample.</returns>
     public Task<IEnumerable<IMeasurementData>> ProcessAsync(IEnumerable<IMeasurementData> input)
     {
-        // Extract the 14 features from measurements
+        // Extract the 5 features from measurements
         float[] features = ExtractFeatures(input);
 
         // Apply Z-score normalization if enabled
@@ -36,24 +36,16 @@ public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IData
         else
             meanTime = DateTime.UtcNow;
 
-        var result = new List<IMeasurementData>
+        string[] featureNames = config.NormalizationParameters.Keys.ToArray();
+
+        var result = new List<IMeasurementData>();
+
+        for (int i = 0; i < normalizedFeatures.Length && i < featureNames.Length; i++)
         {
-            new MeasurementData<float>(meanTime, "GlobalActivityRatio", normalizedFeatures[0]),
-            new MeasurementData<float>(meanTime, "GlobalChangeDensity", normalizedFeatures[1]),
-            new MeasurementData<float>(meanTime, "InterAxisMeanCorrelation", normalizedFeatures[2]),
-            new MeasurementData<float>(meanTime, "InterAxisMaxCorrelation", normalizedFeatures[3]),
-            new MeasurementData<float>(meanTime, "InterAxisCorrelationVariance", normalizedFeatures[4]),
-            new MeasurementData<float>(meanTime, "AxisSynchronization", normalizedFeatures[5]),
-            new MeasurementData<float>(meanTime, "AxisLoadBalance", normalizedFeatures[6]),
-            new MeasurementData<float>(meanTime, "TemporalStability", normalizedFeatures[7]),
-            new MeasurementData<float>(meanTime, "GlobalSkewness", normalizedFeatures[8]),
-            new MeasurementData<float>(meanTime, "GlobalKurtosis", normalizedFeatures[9]),
-            new MeasurementData<float>(meanTime, "GlobalTrendSlope", normalizedFeatures[10]),
-            new MeasurementData<float>(meanTime, "CoefficientOfVariation", normalizedFeatures[11]),
-            new MeasurementData<float>(meanTime, "NormalizedIqrMedian", normalizedFeatures[12]),
-            new MeasurementData<float>(meanTime, "NormalizedIqrMean", normalizedFeatures[13]),
-            new MeasurementData<string>(meanTime, "Label", string.Empty),
-        };
+            result.Add(new MeasurementData<float>(meanTime, featureNames[i], normalizedFeatures[i]));
+        }
+
+        result.Add(new MeasurementData<string>(meanTime, "Label", string.Empty)); // Placeholder for label
 
         return Task.FromResult(result.AsEnumerable());
     }
@@ -67,7 +59,7 @@ public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IData
         if (measurements == null)
         {
             Log.Warning("No measurements provided for feature extraction.");
-            return new float[14];
+            return new float[5];
         }
 
         // Concatenate all currents from all actuators
@@ -95,76 +87,29 @@ public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IData
         if (allCurrents.Count == 0)
         {
             Log.Warning("No valid current values found for feature extraction.");
-            return new float[14];
+            return new float[5];
         }
 
-        // Calculate global statistics
-        float globalStd = MathUtils.StandardDeviation(allCurrents);
-        float globalMean = MathUtils.Mean(allCurrents);
-        float globalMedian = MathUtils.Percentile(allCurrents, 50);
-        float globalQ25 = MathUtils.Percentile(allCurrents, 25);
-        float globalQ75 = MathUtils.Percentile(allCurrents, 75);
-        float globalIqr = globalQ75 - globalQ25;
-
-        // Feature 1: Global Activity Ratio
-        float activityThreshold = globalStd * 2;
-        float activeRatio = allCurrents.Count(x => Math.Abs(x) > activityThreshold) / (float)allCurrents.Count;
-
-        // Feature 2: Global Change Density
-        var diffSignals = allCurrents.Zip(allCurrents.Skip(1), (a, b) => Math.Abs(b - a)).ToList();
-        int significantChanges = diffSignals.Count(x => x > globalStd * 1.5);
-        float changeDensity = significantChanges / (float)allCurrents.Count;
-
-        // Extract actuator currents for correlation analysis
         List<List<float>> actuatorsCurrents = ExtractActuatorCurrents(measurements);
 
-        // Features 3-5: Inter-actuator correlations
         List<float> correlations = CalculateInterActuatorCorrelations(actuatorsCurrents);
-        float meanCorrelation = correlations.Count > 0 ? correlations.Average() : 0f;
         float maxCorrelation = correlations.Count > 0 ? correlations.Max() : 0f;
         float correlationVariance = correlations.Count > 0 ? MathUtils.StandardDeviation(correlations) : 0f;
 
-        // Feature 6: Actuator Synchronization
-        var actuatorsMeans = actuatorsCurrents.Select(MathUtils.Mean).ToList();
-        float meanOfMeans = actuatorsMeans.Average();
-        float synchronization = meanOfMeans != 0 ? 1 - (MathUtils.StandardDeviation(actuatorsMeans) / Math.Abs(meanOfMeans)) : 1f;
-
-        // Feature 7: Actuator Load Balance
         var actuatorsEnergies = actuatorsCurrents.Select(actuator => actuator.Sum(x => x * x)).ToList();
         float meanEnergy = actuatorsEnergies.Average();
         float loadBalance = meanEnergy != 0 ? 1 - (MathUtils.StandardDeviation(actuatorsEnergies) / meanEnergy) : 1f;
-
-        // Feature 8: Temporal Stability
         float temporalStability = CalculateTemporalStability(allCurrents);
 
-        // Features 9-10: Global Skewness and Kurtosis
         float globalSkewness = MathUtils.Skewness(allCurrents);
-        float globalKurtosis = MathUtils.Kurtosis(allCurrents);
-
-        // Feature 11: Global Trend Slope
-        float trendSlope = CalculateTrendSlope(allCurrents);
-
-        // Features 12-14: Normalized coefficients
-        float coeffVar = Math.Abs(globalMean) > 1e-8f ? globalStd / globalMean : 0f;
-        float normIqrMedian = Math.Abs(globalMedian) > 1e-8f ? globalIqr / globalMedian : 0f;
-        float normIqrMean = Math.Abs(globalMean) > 1e-8f ? globalIqr / globalMean : 0f;
 
         return
         [
-            activeRatio,
-            changeDensity,
-            meanCorrelation,
-            maxCorrelation,
-            correlationVariance,
-            synchronization,
             loadBalance,
+            correlationVariance,
+            maxCorrelation,
             temporalStability,
             globalSkewness,
-            globalKurtosis,
-            trendSlope,
-            coeffVar,
-            normIqrMedian,
-            normIqrMean,
         ];
     }
 
@@ -254,23 +199,6 @@ public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IData
             : 1f;
     }
 
-    private float CalculateTrendSlope(List<float> allCurrents)
-    {
-        if (allCurrents.Count < 2)
-        {
-            return 0f;
-        }
-
-        var timeIndices = Enumerable.Range(0, allCurrents.Count).Select(x => (float)x).ToList();
-        float meanTime = timeIndices.Average();
-        float meanCurrent = allCurrents.Average();
-
-        float numerator = timeIndices.Zip(allCurrents, (t, c) => (t - meanTime) * (c - meanCurrent)).Sum();
-        float denominator = timeIndices.Sum(t => (t - meanTime) * (t - meanTime));
-
-        return denominator != 0 ? numerator / denominator : 0f;
-    }
-
     private float[] NormalizeFeaturesAsync(float[] features, PreprocessingConfig preprocessing)
     {
         if (!preprocessing.EnableZScoreNormalization)
@@ -278,13 +206,7 @@ public class ActuatorCurrentFeatureExtractor(PreprocessingConfig config) : IData
             return features;
         }
 
-        string[] featureNames =
-        [
-            "GlobalActivityRatio", "GlobalChangeDensity", "InterAxisMeanCorrelation",
-            "InterAxisMaxCorrelation", "InterAxisCorrelationVariance", "AxisSynchronization",
-            "AxisLoadBalance", "TemporalStability", "GlobalSkewness", "GlobalKurtosis",
-            "GlobalTrendSlope", "CoefficientOfVariation", "NormalizedIqrMedian", "NormalizedIqrMean",
-        ];
+        string[] featureNames = preprocessing.NormalizationParameters.Keys.ToArray();
 
         float[] normalized = new float[features.Length];
 
