@@ -1,0 +1,32 @@
+{
+  "CollectorType": "HTTP",
+  "Collector": {
+    "DeviceName": "HttpDevice",
+    "Location": "Lab",
+    "HealthCheckEndpoint": "http://localhost:5000/health",
+    "FlushIntervalMilliseconds": 1000,
+    "SamplingRate": 10,
+    "Endpoint": "api/HttpCollector/collect",
+    "RegistrationService": {
+      "BaseUrl": "http://localhost:5137",
+      "Endpoint": "api/DeviceRegistration/register"
+    },
+    "BufferSettings": {
+      "MaxBufferSize": 10000
+    },
+    "Sensors": [
+      {
+        "Name": "temperature",
+        "Type": "Temperature",
+        "Unit": "C",
+        "DataType": "Double"
+      },
+      {
+        "Name": "status",
+        "Type": "Status",
+        "Unit": "",
+        "DataType": "String"
+      }
+    ]
+  }
+}

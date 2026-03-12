@@ -1,5 +1,7 @@
 using DataAggregator.Collector.FileCollector.Configuration;
 using DataAggregator.Collector.FileCollector.Connector;
+using DataAggregator.Collector.HttpCollector.Configuration;
+using DataAggregator.Collector.HttpCollector.Connector;
 using DataAggregator.Collector.OpenCNCapnProtoConnector.CapnProto;
 using DataAggregator.Collector.OpenCNCapnProtoConnector.OpenCN;
 using DataAggregator.Collector.Shared.Abstraction;
@@ -24,7 +26,7 @@ builder.Host.UseSerilog();
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator Collector API", Version = "v1" }));
+builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "DataAggregator API", Version = "v1" }));
 
 if (!builder.Environment.IsDevelopment())
 {
@@ -117,7 +119,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DataAggregator Collector API v1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "DataAggregator API v1");
         c.RoutePrefix = string.Empty;
     });
 }
@@ -196,6 +198,11 @@ static void SetupConfiguration(WebApplicationBuilder builder)
             builder.Services.AddSingleton<IOptions<CollectorConfiguration>>(sp =>
                 sp.GetRequiredService<IOptions<FileConnectorConfiguration>>());
             break;
+        case "HTTP":
+            builder.Services.Configure<HttpCollectorConfiguration>(builder.Configuration.GetSection("Collector"));
+            builder.Services.AddSingleton<IOptions<CollectorConfiguration>>(sp =>
+                sp.GetRequiredService<IOptions<HttpCollectorConfiguration>>());
+            break;
         default:
             Log.Warning("Collector type not specified or unsupported, application will close");
             throw new InvalidOperationException("Collector type not specified or unsupported.");
@@ -220,8 +227,19 @@ static void RegisterCollectorSpecificServices(WebApplicationBuilder builder, str
                 return new FileConnector(config);
             });
             break;
+        case "HTTP":
+            builder.Services.AddSingleton<HttpConnector>(sp =>
+            {
+                HttpCollectorConfiguration config = sp.GetRequiredService<IOptions<HttpCollectorConfiguration>>().Value;
+                return new HttpConnector(config);
+            });
+            builder.Services.AddSingleton<IDataSourceConnector>(sp =>
+                sp.GetRequiredService<HttpConnector>());
+            break;
         default:
             Log.Fatal($"Unsupported collector type: {collectorType}");
             throw new InvalidOperationException($"Unsupported collector type: {collectorType}");
     }
 }
+
+public partial class Program { }
