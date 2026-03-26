@@ -8,6 +8,10 @@
 **DataAggregator** is a modular infrastructure for collecting, registering, and processing industrial data.  
 It provides a flexible backbone to acquire machine signals, store them in time-series and relational databases, and run ML-based processing pipelines.
 
+It is designed to scale from a single machine to an entire plant, handling heterogeneous environments through dedicated collectors for each data source. Data can be visualized in real time using tools like Grafana or any custom frontend, while processing can run either at the edge or centrally. This enables the application of custom algorithms or ONNX-based models directly on the collected signals.
+
+[demo.webm](https://github.com/user-attachments/assets/730faf7f-43d0-4bb7-9f42-046890b8afd2)
+
 <img width="2212" height="1333" alt="example-architecture" src="https://github.com/user-attachments/assets/d19e435a-cc7b-4c99-80b5-ba42c6701573" />
 
 ---
